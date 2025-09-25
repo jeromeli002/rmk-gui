@@ -26,7 +26,7 @@ export default defineNuxtConfig({
     },
   },
   imports: {
-    dirs: ['types'],
+    dirs: ['types', 'wasm'],
     presets: [
       {
         from: '@tauri-apps/api/core',

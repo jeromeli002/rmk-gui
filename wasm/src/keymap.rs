@@ -3,6 +3,7 @@ use std::sync::LazyLock;
 
 use rmk_types::keycode::KeyCode;
 use strum::IntoEnumIterator;
+use wasm_bindgen::prelude::*;
 
 use crate::keyinfo::KeyInfo;
 use crate::prefix::Prefix;
@@ -264,13 +265,21 @@ pub fn key_to_info(key: u16) -> Option<KeyInfo> {
     })
 }
 
-pub fn key_to_label(key: u16) -> (Option<String>, Option<String>) {
-    match key_to_info(key) {
-        Some(info) => info.symbol,
-        None => (None, None),
-    }
+#[wasm_bindgen]
+pub fn key_to_label(key: u16) -> JsValue {
+    key_to_info(key)
+        .map(|info| {
+            let (sym1, sym2) = info.symbol;
+            js_sys::Array::of2(
+                &sym1.map(JsValue::from).unwrap_or(JsValue::NULL),
+                &sym2.map(JsValue::from).unwrap_or(JsValue::NULL),
+            )
+        })
+        .unwrap_or_else(|| js_sys::Array::new())
+        .into()
 }
 
+#[wasm_bindgen]
 pub fn key_to_rmk(key: u16) -> String {
     match key_to_info(key) {
         Some(info) => info.rmk,

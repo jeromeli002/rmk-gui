@@ -7,7 +7,7 @@
     "nuxt:prepare": "nuxt prepare",
     "keycode:gen": "python3 codegen/gen.py",
     "wasm:build": "cd wasm && wasm-pack build --target bundler --out-dir ../app/wasm --out-name index",
-    "postinstall": "run-s keycode:gen wasm:build nuxt:prepare",
+    "postinstall": "run-s wasm:build nuxt:prepare",
     "js:lint": "eslint",
     "js:fix": "eslint --fix",
     "rust:fmt:check": "cargo fmt --check --manifest-path src-tauri/Cargo.toml",

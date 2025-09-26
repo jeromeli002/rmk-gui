@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "pnpm install",
+  "installCommand": "curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh && pnpm install",
   "buildCommand": "pnpm web:build",
   "outputDirectory": "dist"
 }

@@ -7,6 +7,82 @@ use wasm_bindgen::prelude::*;
 
 use crate::keyinfo::KeyInfo;
 use crate::prefix::Prefix;
+// Helper functions to reduce code duplication
+fn add_layer_operation_with_shift(
+    map: &mut HashMap<u16, KeyInfo>,
+    prefix: u16,
+    count: u16,
+    name: &str,
+    symbol_prefix: &str,
+) {
+    for x in 0..count {
+        let code = prefix + (x << 8);
+        map.insert(
+            code,
+            KeyInfo {
+                code,
+                rmk: format!("{}({}, kc)", name, x),
+                symbol: (Some(format!("{}-{}", symbol_prefix, x)), None),
+            },
+        );
+    }
+}
+
+fn add_layer_operation(
+    map: &mut HashMap<u16, KeyInfo>,
+    prefix: u16,
+    count: u16,
+    name: &str,
+    symbol_prefix: &str,
+) {
+    for x in 0..count {
+        let code = prefix + x;
+        map.insert(
+            code,
+            KeyInfo {
+                code,
+                rmk: format!("{}({})", name, x),
+                symbol: (None, Some(format!("{}-{}", symbol_prefix, x))),
+            },
+        );
+    }
+}
+
+fn add_modifier_key(
+    map: &mut HashMap<u16, KeyInfo>,
+    code: u16,
+    name: &str,
+    symbol: &str,
+) {
+    map.insert(
+        code,
+        KeyInfo {
+            code,
+            rmk: format!("MT({}, kc)", name),
+            symbol: (Some(symbol.to_string()), None),
+        },
+    );
+}
+
+fn add_indexed_keys(
+    map: &mut HashMap<u16, KeyInfo>,
+    prefix: u16,
+    count: u16,
+    name: &str,
+    symbol_prefix: &str,
+) {
+    for x in 0..count {
+        let code = prefix + x;
+        map.insert(
+            code,
+            KeyInfo {
+                code,
+                rmk: format!("{}{}", name, x),
+                symbol: (None, Some(format!("{}-{}", symbol_prefix, x))),
+            },
+        );
+    }
+}
 
 static KEYCODEMAP: LazyLock<HashMap<u16, KeyInfo>> = LazyLock::new(|| {
     let mut map = HashMap::new();
@@ -34,208 +110,31 @@ static KEYCODEMAP: LazyLock<HashMap<u16, KeyInfo>> = LazyLock::new(|| {
         },
     );
     
-    // Layer operations - LT
-    for x in 0..16 {
-        let code = Prefix::LT + (x << 8);
-        map.insert(
-            code,
-            KeyInfo {
-                code,
-                rmk: format!("LT({}, kc)", x),
-                symbol: (Some(format!("LT-{}", x)), None),
-            },
-        );
-    }
-    
-    // Layer operations - MO
-    for x in 0..32 {
-        let code = Prefix::MO + x;
-        map.insert(
-            code,
-            KeyInfo {
-                code,
-                rmk: format!("MO({})", x),
-                symbol: (None, Some(format!("MO-{}", x))),
-            },
-        );
-    }
-    
-    // Layer operations - DF
-    for x in 0..32 {
-        let code = Prefix::DF + x;
-        map.insert(
-            code,
-            KeyInfo {
-                code,
-                rmk: format!("DF({})", x),
-                symbol: (None, Some(format!("DF-{}", x))),
-            },
-        );
-    }
-    
-    // Layer operations - TG
-    for x in 0..32 {
-        let code = Prefix::TG + x;
-        map.insert(
-            code,
-            KeyInfo {
-                code,
-                rmk: format!("TG({})", x),
-                symbol: (None, Some(format!("TG-{}", x))),
-            },
-        );
-    }
-    
-    // Layer operations - TT
-    for x in 0..32 {
-        let code = Prefix::TT + x;
-        map.insert(
-            code,
-            KeyInfo {
-                code,
-                rmk: format!("TT({})", x),
-                symbol: (None, Some(format!("TT-{}", x))),
-            },
-        );
-    }
-    
-    // Layer operations - TO
-    for x in 0..32 {
-        let code = Prefix::TO + x;
-        map.insert(
-            code,
-            KeyInfo {
-                code,
-                rmk: format!("TO({})", x),
-                symbol: (None, Some(format!("TO-{}", x))),
-            },
-        );
-    }
-    
-    // Layer operations - OSL
-    for x in 0..32 {
-        let code = Prefix::OSL + x;
-        map.insert(
-            code,
-            KeyInfo {
-                code,
-                rmk: format!("OSL({})", x),
-                symbol: (None, Some(format!("OSL-{}", x))),
-            },
-        );
-    }
-    
-    // Layer operations - PDF
-    for x in 0..32 {
-        let code = Prefix::PDF + x;
-        map.insert(
-            code,
-            KeyInfo {
-                code,
-                rmk: format!("PDF({})", x),
-                symbol: (None, Some(format!("PDF-{}", x))),
-            },
-        );
-    }
+    // Layer operations
+    add_layer_operation_with_shift(&mut map, Prefix::LT, 16, "LT", "LT");
+    add_layer_operation(&mut map, Prefix::MO, 32, "MO", "MO");
+    add_layer_operation(&mut map, Prefix::DF, 32, "DF", "DF");
+    add_layer_operation(&mut map, Prefix::TG, 32, "TG", "TG");
+    add_layer_operation(&mut map, Prefix::TT, 32, "TT", "TT");
+    add_layer_operation(&mut map, Prefix::TO, 32, "TO", "TO");
+    add_layer_operation(&mut map, Prefix::OSL, 32, "OSL", "OSL");
+    add_layer_operation(&mut map, Prefix::PDF, 32, "PDF", "PDF");
     
     // Modifiers
-    map.insert(
-        Prefix::LCTRL,
-        KeyInfo {
-            code: Prefix::LCTRL,
-            rmk: "MT(LCtrl, kc)".to_string(),
-            symbol: (Some("LCtrl".to_string()), None),
-        },
-    );
-    
-    map.insert(
-        Prefix::RCTRL,
-        KeyInfo {
-            code: Prefix::RCTRL,
-            rmk: "MT(RCtrl, kc)".to_string(),
-            symbol: (Some("RCtrl".to_string()), None),
-        },
-    );
-    
-    map.insert(
-        Prefix::LSHIFT,
-        KeyInfo {
-            code: Prefix::LSHIFT,
-            rmk: "MT(LShift, kc)".to_string(),
-            symbol: (Some("LShift".to_string()), None),
-        },
-    );
-    
-    map.insert(
-        Prefix::RSHIFT,
-        KeyInfo {
-            code: Prefix::RSHIFT,
-            rmk: "MT(RShift, kc)".to_string(),
-            symbol: (Some("RShift".to_string()), None),
-        },
-    );
-    
-    map.insert(
-        Prefix::LALT,
-        KeyInfo {
-            code: Prefix::LALT,
-            rmk: "MT(LAlt, kc)".to_string(),
-            symbol: (Some("LAlt".to_string()), None),
-        },
-    );
-    
-    map.insert(
-        Prefix::RALT,
-        KeyInfo {
-            code: Prefix::RALT,
-            rmk: "MT(RAlt, kc)".to_string(),
-            symbol: (Some("RAlt".to_string()), None),
-        },
-    );
-    
-    map.insert(
-        Prefix::LGUI,
-        KeyInfo {
-            code: Prefix::LGUI,
-            rmk: "MT(LGui, kc)".to_string(),
-            symbol: (Some("LGui".to_string()), None),
-        },
-    );
-    
-    map.insert(
-        Prefix::RGUI,
-        KeyInfo {
-            code: Prefix::RGUI,
-            rmk: "MT(RGui, kc)".to_string(),
-            symbol: (Some("RGui".to_string()), None),
-        },
-    );
+    add_modifier_key(&mut map, Prefix::LCTRL, "LCtrl", "LCtrl");
+    add_modifier_key(&mut map, Prefix::RCTRL, "RCtrl", "RCtrl");
+    add_modifier_key(&mut map, Prefix::LSHIFT, "LShift", "LShift");
+    add_modifier_key(&mut map, Prefix::RSHIFT, "RShift", "RShift");
+    add_modifier_key(&mut map, Prefix::LALT, "LAlt", "LAlt");
+    add_modifier_key(&mut map, Prefix::RALT, "RAlt", "RAlt");
+    add_modifier_key(&mut map, Prefix::LGUI, "LGui", "LGui");
+    add_modifier_key(&mut map, Prefix::RGUI, "RGui", "RGui");
     
     // Macros
-    for x in 0..32 {
-        let code = Prefix::MACRO + x;
-        map.insert(
-            code,
-            KeyInfo {
-                code,
-                rmk: format!("Macro{}", x),
-                symbol: (None, Some(format!("Macro-{}", x))),
-            },
-        );
-    }
+    add_indexed_keys(&mut map, Prefix::MACRO, 32, "Macro", "Macro");
     
     // TapDance
-    for x in 0..32 {
-        let code = Prefix::TAP_DANCE + x;
-        map.insert(
-            code,
-            KeyInfo {
-                code,
-                rmk: format!("TapDance{}", x),
-                symbol: (None, Some(format!("TapDance-{}", x))),
-            },
-        );
-    }
+    add_indexed_keys(&mut map, Prefix::TAP_DANCE, 32, "TapDance", "TapDance");
     
     map
 });
@@ -267,16 +166,16 @@ pub fn key_to_info(key: u16) -> Option<KeyInfo> {
 
 #[wasm_bindgen(js_name = "keyToLabel")]
 pub fn key_to_label(key: u16) -> JsValue {
-    key_to_info(key)
-        .map(|info| {
+    match key_to_info(key) {
+        Some(info) => {
             let (sym1, sym2) = info.symbol;
-            js_sys::Array::of2(
-                &sym1.map(JsValue::from).unwrap_or(JsValue::NULL),
-                &sym2.map(JsValue::from).unwrap_or(JsValue::NULL),
-            )
-        })
-        .unwrap_or_else(|| js_sys::Array::new())
-        .into()
+            let arr = js_sys::Array::new_with_length(2);
+            arr.set(0, sym1.map(JsValue::from).unwrap_or(JsValue::NULL));
+            arr.set(1, sym2.map(JsValue::from).unwrap_or(JsValue::NULL));
+            arr.into()
+        }
+        None => js_sys::Array::new().into(),
+    }
 }
 
 #[wasm_bindgen(js_name = "keyToRmk")]

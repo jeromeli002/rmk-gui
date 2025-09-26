@@ -265,7 +265,7 @@ pub fn key_to_info(key: u16) -> Option<KeyInfo> {
     })
 }
 
-#[wasm_bindgen]
+#[wasm_bindgen(js_name = "keyToLabel")]
 pub fn key_to_label(key: u16) -> JsValue {
     key_to_info(key)
         .map(|info| {
@@ -279,7 +279,7 @@ pub fn key_to_label(key: u16) -> JsValue {
         .into()
 }
 
-#[wasm_bindgen]
+#[wasm_bindgen(js_name = "keyToRmk")]
 pub fn key_to_rmk(key: u16) -> String {
     match key_to_info(key) {
         Some(info) => info.rmk,

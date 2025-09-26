@@ -5,7 +5,6 @@
   "description": "Gui configuration for RMK based on Tauri and Nuxt",
   "scripts": {
     "nuxt:prepare": "nuxt prepare",
-    "keycode:gen": "python3 codegen/gen.py",
     "wasm:build": "cd wasm && wasm-pack build --target web --out-dir ../app/wasm --out-name index",
     "postinstall": "run-s wasm:build nuxt:prepare",
     "js:lint": "eslint",

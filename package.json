@@ -6,7 +6,7 @@
   "scripts": {
     "nuxt:prepare": "nuxt prepare",
     "keycode:gen": "python3 codegen/gen.py",
-    "wasm:build": "cd wasm && wasm-pack build --target bundler --out-dir ../app/wasm --out-name index",
+    "wasm:build": "cd wasm && wasm-pack build --target web --out-dir ../app/wasm --out-name index",
     "postinstall": "run-s wasm:build nuxt:prepare",
     "js:lint": "eslint",
     "js:fix": "eslint --fix",

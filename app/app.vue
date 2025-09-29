@@ -1,8 +1,5 @@
 <script setup lang="ts">
 useSettingStore()
-
-console.log(keyToRmk(10))
-console.log(keyToLabel(10).first)
 </script>
 
 <template>

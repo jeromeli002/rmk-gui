@@ -44,10 +44,14 @@ export class WebHIDDevice implements HIDInterface {
     return this.device.productName || 'Unknown WebHID Device'
   }
 
-  async writeRead(data: number[]): Promise<Uint8Array> {
+  async write(data: number[]): Promise<void> {
     if (!this.isConnected())
       throw new Error('Device not connected')
 
+    await this.device.sendReport(0, new Uint8Array(data))
+  }
+
+  async read(): Promise<Uint8Array> {
     return new Promise<Uint8Array>((resolve, reject) => {
       const requestId = this.nextRequestId++
 
@@ -57,13 +61,12 @@ export class WebHIDDevice implements HIDInterface {
       }, 1000)
 
       this.pendingRequests.set(requestId, { resolve, reject, timeout })
-
-      this.device.sendReport(0, new Uint8Array(data)).catch((err) => {
-        this.pendingRequests.delete(requestId)
-        clearTimeout(timeout)
-        reject(err)
-      })
     })
+  }
+
+  async writeRead(data: number[]): Promise<Uint8Array> {
+    await this.write(data)
+    return await this.read()
   }
 
   async disconnect(): Promise<void> {
@@ -107,14 +110,21 @@ export class TauriHIDDevice implements HIDInterface {
     return await invoke('product_name')
   }
 
-  async writeRead(data: number[]): Promise<Uint8Array> {
+  async write(data: number[]): Promise<void> {
+    await invoke('write', { data: Array.from(data) })
+  }
+
+  async read(): Promise<Uint8Array> {
     if (!this.connected)
       throw new Error('Device not connected')
 
-    const result: number[] = await invoke('write_read', {
-      data: Array.from(data),
-    })
+    const result: number[] = await invoke('read')
     return new Uint8Array(result)
+  }
+
+  async writeRead(data: number[]): Promise<Uint8Array> {
+    await this.write(data)
+    return await this.read()
   }
 
   async disconnect(): Promise<void> {

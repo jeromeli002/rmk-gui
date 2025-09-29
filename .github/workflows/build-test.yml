@@ -24,6 +24,9 @@ jobs:
         with:
           python-version: '>=3.11'
 
+      - name: install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
       - name: Install dependencies
         run: pnpm install
 

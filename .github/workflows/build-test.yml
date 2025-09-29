@@ -73,6 +73,9 @@ jobs:
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
+      - name: install rustfmt clippy
+        run: rustup component add rustfmt clippy
+
       - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-24.04' # This must match the platform value defined above.
         run: |

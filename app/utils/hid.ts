@@ -14,25 +14,25 @@ export class WebHIDApi implements HIDApi {
 }
 
 export class WebHIDDevice implements HIDInterface {
-  private pendingRequests: Map<number, { resolve: (value: Uint8Array) => void, reject: (reason: any) => void, timeout: ReturnType<typeof setTimeout> }> = new Map()
-  private nextRequestId = 1
+  private pendingRequests: Array<{ resolve: (value: Uint8Array) => void, reject: (reason: any) => void }> = []
 
   constructor(private device: HIDDevice) {
-    this.device.addEventListener('inputreport', this.handleInputReport.bind(this))
+    this.device.addEventListener('inputreport', this.handleInputReport)
   }
 
-  private handleInputReport(event: HIDInputReportEvent): void {
-    if (event.reportId === 0) {
-      const data = new Uint8Array(event.data.buffer)
-      if (this.pendingRequests.size > 0) {
-        const requestId = this.pendingRequests.keys().next().value as number
-        const request = this.pendingRequests.get(requestId)
-        if (request) {
-          this.pendingRequests.delete(requestId)
-          clearTimeout(request.timeout)
-          request.resolve(data)
-        }
-      }
+  private handleInputReport = (event: HIDInputReportEvent): void => {
+    if (event.reportId !== 0) {
+      return
+    }
+    if (this.pendingRequests.length === 0) {
+      return
+    }
+
+    const data = new Uint8Array(event.data.buffer)
+    const request = this.pendingRequests.shift()
+
+    if (request) {
+      request.resolve(data)
     }
   }
 
@@ -53,14 +53,7 @@ export class WebHIDDevice implements HIDInterface {
 
   async read(): Promise<Uint8Array> {
     return new Promise<Uint8Array>((resolve, reject) => {
-      const requestId = this.nextRequestId++
-
-      const timeout = setTimeout(() => {
-        this.pendingRequests.delete(requestId)
-        reject(new Error('Device response timeout'))
-      }, 1000)
-
-      this.pendingRequests.set(requestId, { resolve, reject, timeout })
+      this.pendingRequests.push({ resolve, reject })
     })
   }
 
@@ -70,15 +63,8 @@ export class WebHIDDevice implements HIDInterface {
   }
 
   async disconnect(): Promise<void> {
-    // 清理所有待处理的请求
-    for (const request of this.pendingRequests.values()) {
-      clearTimeout(request.timeout)
-      request.reject(new Error('Device disconnected'))
-    }
-    this.pendingRequests.clear()
-
-    // 移除事件监听器
-    this.device.removeEventListener('inputreport', this.handleInputReport.bind(this))
+    this.pendingRequests.map(req => req.reject(new Error('Device disconnected')))
+    this.device.removeEventListener('inputreport', this.handleInputReport)
 
     if (this.device?.opened) {
       await this.device.close()

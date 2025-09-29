@@ -16,6 +16,9 @@ jobs:
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
+      - name: install rustfmt
+        run: rustup component add rustfmt
+
       - uses: pnpm/action-setup@v4
         with:
           version: 10

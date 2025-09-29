@@ -4,7 +4,7 @@ src-tauri/gen/schemas
 
 # Wasm
 wasm/target
-app/assets/wasm
+app/wasm
 
 # Nuxt dev/build outputs
 .output

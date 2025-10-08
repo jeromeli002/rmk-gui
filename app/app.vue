@@ -1,5 +1,5 @@
 <script setup lang="ts">
-useSettingStore()
+useSettingStore();
 </script>
 
 <template>

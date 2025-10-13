@@ -1,170 +1,123 @@
 <script lang="ts" setup>
-const {
-  keys = [null, null],
-  kleProps = {
-    width: 1,
-    height: 1,
-    width2: 1,
-    height2: 1,
-    x2: 0,
-    y2: 0,
-  },
-  select,
-  keyMargin = 6,
-  defaultKeySize = 48,
-} = defineProps<{
-  keys?: [string | null, string | null]
-  kleProps?: {
-    width: number
-    height: number
-    width2: number
-    height2: number
-    x2: number
-    y2: number
-  }
-  select?: 'outer' | 'inner' | null
-  keyMargin?: number
-  defaultKeySize?: number
+const { keyInfo, highlight, padding = 0, size = 50 } = defineProps<{
+  keyInfo: Key
+  highlight?: 'outer' | 'inner'
+  padding?: number
+  size?: number
 }>()
 
 const emit = defineEmits<{
   (e: 'click', zone: 'outer' | 'inner'): void
 }>()
-function fitKeySize(size: number): string {
-  return `${defaultKeySize * size - keyMargin}px`
-}
-function maxKeySize(size1: number, size2: number): number {
-  return size1 > size2 ? size1 : size2
-}
-function insertLineBreaks(str: string, maxLength: number): string {
-  return str.replace(new RegExp(`(.{${maxLength}})`, 'g'), '$1\n')
-}
-function insertLineBigSize(text: string): string {
-  return text.replace(/([A-Z])/g, '\n$1')
-}
-function keyBreaks(key: string | null) {
-  if (key === null) {
-    return ''
-  }
-  if (key.length < Math.round(7 * maxKeySize(kleProps.width, kleProps.width2))) {
-    return key
-  }
-
-  const keys = insertLineBigSize(key).split('\n')
-
-  for (let i = 0; i < keys.length; i++) {
-    if (keys[i]!.length > Math.round(7 * maxKeySize(kleProps.width, kleProps.width2))) {
-      keys[i] = insertLineBreaks(keys[i]!, Math.round(6 * maxKeySize(kleProps.width, kleProps.width2)))
-    }
-  }
-  return keys.join('\n')
-}
-
-function isOuterStyle() {
-  return select && select === 'outer'
-    ? 'bg-primary-100/50 dark:bg-primary-600/50 text-surface-900 dark:text-surface-100'
-    : 'bg-surface-300 dark:bg-surface-600 text-surface-700 dark:text-surface-300 group-active:bg-surface-400 group-active:dark:bg-surface-700'
-}
-function isOuterShadow() {
-  return select && select === 'outer'
-    ? 'shadow-[0_1px_1px_1px] shadow-primary-600 dark:shadow-primary-900'
-    : 'shadow-[0_1px_1px_1px] shadow-surface-400 dark:shadow-surface-900 group-active:shadow-surface-600'
-}
-function isInnerStyle() {
-  return select && select === 'inner'
-    ? 'bg-primary-100 dark:bg-primary-600 text-surface-900 dark:text-surface-100'
-    : 'bg-surface-300 dark:bg-surface-600 text-surface-700 dark:text-surface-300 active:bg-surface-400 active:dark:bg-surface-700'
-}
 </script>
 
 <template>
   <div
-    class="rounded-prime-md relative cursor-pointer select-none text-center font-bold"
+    class="font-mono text-surface-900 dark:text-surface-100"
     :style="{
-      width: fitKeySize(maxKeySize(kleProps.width, kleProps.width2)),
-      height: fitKeySize(maxKeySize(kleProps.height, kleProps.height2)),
-      fontSize: `${Math.round(defaultKeySize / 5)}px`,
-      lineHeight: `${Math.round(defaultKeySize / 5)}px`,
+      width: `${Math.max(keyInfo.geometry.width, keyInfo.geometry.width2) * size}px`,
+      height: `${Math.max(keyInfo.geometry.height, keyInfo.geometry.height2) * size}px`,
     }"
   >
-    <div class="group">
+    <div class="group relative" @click="emit('click', 'outer')">
+      <!-- 边框 -->
       <div
-        class="rounded-prime-md absolute transition-colors duration-200"
-        :class="isOuterShadow()"
+        class="rounded-prime-md absolute bg-surface-400 shadow-sm shadow-surface-400 dark:bg-surface-800 dark:shadow-surface-800"
+        :class="{ '!bg-primary-400': highlight === 'outer' }"
         :style="{
-          width: fitKeySize(kleProps.width2),
-          height: fitKeySize(kleProps.height2),
-          top: `${kleProps.y2 * defaultKeySize}px`,
-          left: `${kleProps.x2 * defaultKeySize}px`,
+          top: `${padding + 2}px`,
+          left: `${padding - 1}px`,
+          width: `${keyInfo.geometry.width * size - padding * 2 + 2}px`,
+          height: `${keyInfo.geometry.height * size - padding * 2}px`,
         }"
       />
       <div
-        class="rounded-prime-md absolute transition-colors duration-200"
-        :class="isOuterShadow()"
+        class="rounded-prime-md absolute bg-surface-400 shadow-sm shadow-surface-400 dark:bg-surface-800 dark:shadow-surface-800"
+        :class="{ '!bg-primary-400': highlight === 'outer' }"
         :style="{
-          width: fitKeySize(kleProps.width),
-          height: fitKeySize(kleProps.height),
+          top: `${padding + keyInfo.geometry.y2 * size + 2}px`,
+          left: `${padding + keyInfo.geometry.x2 * size - 1}px`,
+          width: `${keyInfo.geometry.width2 * size - padding * 2 + 2}px`,
+          height: `${keyInfo.geometry.height2 * size - padding * 2}px`,
         }"
       />
-      <button
-        class="rounded-prime-md absolute transition-colors duration-200"
-        :class="isOuterStyle()"
+      <!-- 主按键 -->
+      <div
+        class="rounded-prime-md absolute bg-surface-300 group-active:opacity-0 dark:bg-surface-700"
+        :class="{ '!bg-primary-100': highlight === 'outer' }"
         :style="{
-          width: fitKeySize(kleProps.width2),
-          height: fitKeySize(kleProps.height2),
-          top: `${kleProps.y2 * defaultKeySize}px`,
-          left: `${kleProps.x2 * defaultKeySize}px`,
+          top: `${padding}px`,
+          left: `${padding}px`,
+          width: `${keyInfo.geometry.width * size - padding * 2}px`,
+          height: `${keyInfo.geometry.height * size - padding * 2}px`,
         }"
-        @click.stop="emit('click', 'outer')"
       />
-      <div v-if="keys[0]">
-        <button
-          class="rounded-prime-md absolute flex justify-center pt-[3px] transition-colors duration-200"
-          :class="isOuterStyle()"
-          :style="{
-            width: fitKeySize(kleProps.width),
-            height: fitKeySize(kleProps.height),
-          }"
-          @click.stop="emit('click', 'outer')"
-        >
-          <span>{{ keyBreaks(keys[0]) }}</span>
-        </button>
-        <div
-          class="absolute bg-surface-500 dark:bg-surface-400"
-          :style="{
-            top: `${defaultKeySize / 3 - (keyMargin / 3)}px`,
-            left: `${(keyMargin / 2) + (kleProps.width * defaultKeySize - keyMargin * 2) / 6}px`,
-            width: `${(kleProps.width * defaultKeySize - keyMargin * 2) * 2 / 3}px`,
-            height: `${keyMargin / 3}px`,
-          }"
-        />
-      </div>
-      <button
-        v-else
-        class="rounded-prime-md absolute flex items-center justify-center transition-colors duration-200"
-        :class="isOuterStyle()"
+      <div
+        class="rounded-prime-md absolute bg-surface-300 group-active:opacity-0 dark:bg-surface-700"
+        :class="{ '!bg-primary-100': highlight === 'outer' }"
         :style="{
-          width: fitKeySize(kleProps.width),
-          height: fitKeySize(kleProps.height),
+          top: `${padding + keyInfo.geometry.y2 * size}px`,
+          left: `${padding + keyInfo.geometry.x2 * size}px`,
+          width: `${keyInfo.geometry.width2 * size - padding * 2}px`,
+          height: `${keyInfo.geometry.height2 * size - padding * 2}px`,
         }"
-        @click.stop="emit('click', 'outer')"
+      />
+      <!-- 按键名 -->
+      <span
+        v-if="keyInfo.info.symbol[0] === null"
+        class="absolute" :class="{ 'text-xl': keyInfo.info.symbol[1]!.length === 1 }" style="transform: translate(-50%, -50%)"
+        :style="{
+          top: `${keyInfo.geometry.height / 2 * size}px`,
+          left: `${keyInfo.geometry.width / 2 * size}px`,
+        }"
       >
-        <span>{{ keyBreaks(keys[1]) }}</span>
-      </button>
+        {{ keyInfo.info.symbol[1] }}
+      </span>
+      <span
+        v-else
+        class="absolute whitespace-nowrap" style="transform: translate(-50%, -50%)"
+        :style="{
+          top: `${padding + (keyInfo.geometry.height * size - 2 * padding) / 5}px`,
+          left: `${keyInfo.geometry.width / 2 * size}px`,
+        }"
+      >
+        {{ keyInfo.info.symbol[0] }}
+      </span>
     </div>
-    <button
-      v-if="keys[0]"
-      class="rounded-prime-md absolute flex items-center justify-center border-surface-800 transition-colors duration-200 dark:border-surface-200"
-      :class="isInnerStyle()"
-      :style="{
-        top: `${defaultKeySize / 3}px`,
-        left: `${keyMargin / 2}px`,
-        width: `${kleProps.width * defaultKeySize - keyMargin * 2}px`,
-        height: `${kleProps.height * defaultKeySize - keyMargin * 1.5 - defaultKeySize / 3}px`,
-      }"
-      @click.stop="emit('click', 'inner')"
+    <!-- 副按键 -->
+    <div
+      v-if="keyInfo.info.symbol[0] !== null"
+      class="group relative"
+      @click="emit('click', 'inner')"
     >
-      <span>{{ keyBreaks(keys[1]) }}</span>
-    </button>
+      <div
+        class="rounded-prime-md absolute bg-surface-400 opacity-0 group-active:opacity-100 dark:bg-surface-800"
+        :class="{ '!bg-primary-100': highlight === 'inner', '!opacity-100': highlight === 'inner' }"
+        style="transform: translate(-50%, -50%)" :style="{
+          top: `${padding + (keyInfo.geometry.height * size - 2 * padding) / 5 * 3.5}px`,
+          left: `${keyInfo.geometry.width / 2 * size}px`,
+          width: `${keyInfo.geometry.width * size - padding * 2}px`,
+          height: `${(keyInfo.geometry.height * size - 2 * padding) / 5 * 3}px`,
+        }"
+      />
+      <span
+        class="absolute h-[2px] rounded-full bg-surface-500 dark:bg-surface-400" style="transform: translate(-50%, -50%)"
+        :style="{
+          top: `${padding + (keyInfo.geometry.height * size - 2 * padding) / 5 * 2}px`,
+          left: `${keyInfo.geometry.width / 2 * size}px`,
+          width: `${keyInfo.geometry.width / 2 * size}px`,
+        }"
+      />
+
+      <span
+        class="absolute whitespace-nowrap" style="transform: translate(-50%, -50%)"
+        :style="{
+          top: `${padding + (keyInfo.geometry.height * size - 2 * padding) / 5 * 3.5}px`,
+          left: `${keyInfo.geometry.width / 2 * size}px`,
+        }"
+      >
+        {{ keyInfo.info.symbol[1] }}
+      </span>
+    </div>
   </div>
 </template>

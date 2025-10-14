@@ -104,7 +104,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
         position: { row, col },
         info: {
           code: keycode,
-          symbol: [...keyToLable(keycode)],
+          symbol: [...keyToLabel(keycode)],
         },
       } as Key
     })

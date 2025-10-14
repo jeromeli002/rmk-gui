@@ -130,7 +130,7 @@ pub fn key_to_info(key: u16) -> Option<KeyInfo> {
     let base_key = key & 0xFF00;
     let base_info = KEYCODEMAP.get(&base_key)?;
 
-    if base_info.symbol.first.is_none() || !base_info.rmk.contains("kc") {
+    if base_info.symbol.0.is_none() || !base_info.rmk.contains("kc") {
         return Some(base_info.clone());
     }
 
@@ -140,7 +140,7 @@ pub fn key_to_info(key: u16) -> Option<KeyInfo> {
     Some(KeyInfo {
         code: base_info.code,
         rmk: base_info.rmk.clone(),
-        symbol: KeySymbol::new(base_info.symbol.first.clone(), sub_key_info.symbol.second.clone()),
+        symbol: KeySymbol::new(base_info.symbol.0.clone(), sub_key_info.symbol.1.clone()),
     })
 }
 

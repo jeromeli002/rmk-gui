@@ -14,7 +14,7 @@ pub fn is_vial_device(device_info: &DeviceInfo) -> bool {
     serial_number.contains(VIAL_SERIAL_NUMBER_MAGIC) && is_rawhid(device_info) || device_info.usage_page() == 0xFF60
 }
 
-pub fn hid_write_read(device: &HidDevice, data: &[u8]) -> Result<[u8; 32], String> {
+pub fn hid_write(device: &HidDevice, data: &[u8]) -> Result<(), String> {
     if data.len() > MSG_LEN {
         return Err("Operation not supported: data length exceeds limit".to_string());
     }
@@ -25,7 +25,10 @@ pub fn hid_write_read(device: &HidDevice, data: &[u8]) -> Result<[u8; 32], Strin
     device
         .write(&write_buffer)
         .map_err(|e| format!("Device write failed: {e}"))?;
+    Ok(())
+}
 
+pub fn hid_read(device: &HidDevice) -> Result<[u8; 32], String> {
     let mut read_buffer = [0u8; MSG_LEN];
 
     device

@@ -11,14 +11,12 @@ pub struct KeyInfo {
 
 #[derive(Debug, Clone, Tsify, Serialize, Deserialize)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct KeySymbol {
-    pub first: Option<String>,
-    pub second: Option<String>,
-}
+pub struct KeySymbol(pub Option<String>, pub Option<String>);
+
 
 #[wasm_bindgen]
 impl KeySymbol {
     pub fn new(first: Option<String>, second: Option<String>) -> Self {
-        KeySymbol { first, second }
+        KeySymbol(first, second)
     }
 }

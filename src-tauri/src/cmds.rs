@@ -1,10 +1,8 @@
-use std::collections::HashMap;
-use std::ffi::CString;
-use std::fs;
+use std::{collections::HashMap, ffi::CString, fs};
 
 use crate::{
     models::{AppState, VialDevice},
-    utils::{config_file, hid_write_read, is_vial_device},
+    utils::{config_file, hid_read, hid_write, is_vial_device},
 };
 
 #[tauri::command]
@@ -44,8 +42,7 @@ pub async fn connect(state: tauri::State<'_, AppState>, path: CString) -> Result
 pub async fn disconnect(state: tauri::State<'_, AppState>) -> Result<(), String> {
     let mut state = state.lock().await;
     state.current_device.take();
-    Ok(())
-}
+    Ok(())}
 
 #[tauri::command]
 pub async fn product_name(state: tauri::State<'_, AppState>) -> Result<String, String> {
@@ -62,11 +59,21 @@ pub async fn product_name(state: tauri::State<'_, AppState>) -> Result<String, S
 }
 
 #[tauri::command]
-pub async fn write_read(state: tauri::State<'_, AppState>, data: Vec<u8>) -> Result<[u8; 32], String> {
+pub async fn write(state: tauri::State<'_, AppState>, data: Vec<u8>) -> Result<(), String> {
     let state = state.lock().await;
     let device = state.current_device.as_ref().unwrap();
 
-    let data = hid_write_read(device, &data).unwrap();
+    hid_write(device, &data).unwrap();
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn read(state: tauri::State<'_, AppState>) -> Result<[u8; 32], String> {
+    let state = state.lock().await;
+    let device = state.current_device.as_ref().unwrap();
+
+    let data = hid_read(device).unwrap();
 
     Ok(data)
 }

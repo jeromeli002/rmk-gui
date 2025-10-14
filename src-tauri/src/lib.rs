@@ -23,7 +23,8 @@ pub fn run() {
             connect,
             disconnect,
             product_name,
-            write_read,
+            write,
+            read,
             storage_read,
             storage_write
         ])

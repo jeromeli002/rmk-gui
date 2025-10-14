@@ -52,7 +52,7 @@ function codeToKey(keycode: number): Key {
     },
     info: {
       code: keycode,
-      symbol: [...keyToLable(keycode)],
+      symbol: [...keyToLabel(keycode)],
     },
   }
 }
@@ -68,7 +68,7 @@ function parseKleLayout(layout: KeymapItem[][]): Key[] {
       position: { row: 0, col: 0 },
       info: {
         code: keycode,
-        symbol: [...keyToLable(keycode)],
+        symbol: [...keyToLabel(keycode)],
       },
     } as Key
   })

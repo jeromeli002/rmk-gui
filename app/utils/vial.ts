@@ -1,5 +1,9 @@
 export class VialDevice implements VialInterface {
-  constructor(private device: HIDInterface) {}
+  private rpcClient: RpcClient
+
+  constructor(private device: HIDInterface) {
+    this.rpcClient = new RpcClient(device)
+  }
 
   private readUint32LE(buffer: Uint8Array): number {
     if (buffer.length < 4) {
@@ -193,8 +197,7 @@ export class VialDevice implements VialInterface {
   }
 
   async layerCount(): Promise<number> {
-    const data = await this.device.writeRead([VialConstants.Command.GetLayerCount])
-    return data[1]!
+    return await this.rpcClient.get_layer_count()
   }
 
   async marcoCount(): Promise<number> {

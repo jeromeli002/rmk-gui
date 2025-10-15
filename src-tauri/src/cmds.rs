@@ -42,7 +42,8 @@ pub async fn connect(state: tauri::State<'_, AppState>, path: CString) -> Result
 pub async fn disconnect(state: tauri::State<'_, AppState>) -> Result<(), String> {
     let mut state = state.lock().await;
     state.current_device.take();
-    Ok(())}
+    Ok(())
+}
 
 #[tauri::command]
 pub async fn product_name(state: tauri::State<'_, AppState>) -> Result<String, String> {

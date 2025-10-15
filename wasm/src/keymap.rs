@@ -82,7 +82,6 @@ static KEYCODEMAP: LazyLock<HashMap<u16, KeyInfo>> = LazyLock::new(|| {
         );
     }
 
-    // Add extended keys
     // Transparent key
     map.insert(
         0x0001,
@@ -113,10 +112,8 @@ static KEYCODEMAP: LazyLock<HashMap<u16, KeyInfo>> = LazyLock::new(|| {
     add_modifier_key(&mut map, Prefix::LGUI, "LGui", "LGui");
     add_modifier_key(&mut map, Prefix::RGUI, "RGui", "RGui");
 
-    // Macros
+    // Macros & TapDance
     add_indexed_keys(&mut map, Prefix::MACRO, 32, "Macro", "Macro");
-
-    // TapDance
     add_indexed_keys(&mut map, Prefix::TAP_DANCE, 32, "TapDance", "TapDance");
 
     map
@@ -144,17 +141,10 @@ pub fn key_to_info(key: u16) -> Option<KeyInfo> {
     })
 }
 
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-}
-
 #[wasm_bindgen(js_name = "keyToLabel")]
 pub fn key_to_label(key: u16) -> KeySymbol {
     match key_to_info(key) {
         Some(info) => {
-            // log(format!("{:?}", info.symbol).as_str());
             info.symbol
         }
         None => KeySymbol::new(None, None),

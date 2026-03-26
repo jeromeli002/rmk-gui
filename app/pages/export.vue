@@ -16,19 +16,10 @@ const keys = computed(() => {
 })
 
 function parseCoordinateString(input: string): [[number, number], string][] {
-  const regex = /\(\s*(\d+)\s*,\s*(\d+)\s*\)/
-  const results: [[number, number], string][] = []
-  let match = regex.exec(input)
-
-  while (match !== null) {
-    const rawString = match[0]
-    const x = Number.parseInt(match[1]!, 10)
-    const y = Number.parseInt(match[2]!, 10)
-    results.push([[x, y], rawString])
-    match = regex.exec(input)
-  }
-
-  return results
+  return Array.from(input.matchAll(/\(\s*(\d+)\s*,\s*(\d+)\s*\)/g)).map(match => [
+    [Number.parseInt(match[1]!, 10), Number.parseInt(match[2]!, 10)],
+    match[0],
+  ])
 }
 </script>
 

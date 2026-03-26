@@ -39,12 +39,14 @@ export function fromU8(value: number): MacroCode {
       return MacroCode.Up
     case 4:
       return MacroCode.Delay
-    // case 6:
-    //   return MacroCode.ExtTap
-    // case 7:
-    //   return MacroCode.ExtDown
-    // case 8:
-    //   return MacroCode.ExtUp
+    case 5:
+      return MacroCode.ExtTap
+    case 6:
+      return MacroCode.ExtDown
+    case 7:
+      return MacroCode.ExtUp
+    case 9:
+      return MacroCode.Text
     default:
       return MacroCode.Text
   }
@@ -62,11 +64,11 @@ export function fromMacroCode(value: MacroCode): MacroAction {
     case MacroCode.Delay:
       return { type: value, name: MacroCode[value], delay: null }
     case MacroCode.ExtTap:
-      return { type: MacroCode.Tap, name: MacroCode[MacroCode.Tap], keyCodes: [] }
+      return { type: value, name: MacroCode[value], keyCodes: [] }
     case MacroCode.ExtDown:
-      return { type: MacroCode.Down, name: MacroCode[MacroCode.Down], keyCodes: [] }
+      return { type: value, name: MacroCode[value], keyCodes: [] }
     case MacroCode.ExtUp:
-      return { type: MacroCode.Up, name: MacroCode[MacroCode.Up], keyCodes: [] }
+      return { type: value, name: MacroCode[value], keyCodes: [] }
     case MacroCode.Text:
       return { type: value, name: MacroCode[value], text: null }
     default:

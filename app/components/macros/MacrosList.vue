@@ -2,6 +2,23 @@
 const keyboardStore = useKeyboardStore()
 const pageMacrosStore = usePageMacrosStore()
 
+function symbolToCode(symbol: [string | null, string | null]) {
+  const needle = JSON.stringify(symbol)
+  for (const [code, info] of Object.entries(keyCodeMap)) {
+    if (JSON.stringify(info.symbol) === needle)
+      return Number(code)
+  }
+  return 0
+}
+
+function toDisplayKey(symbol: [string | null, string | null]): Key {
+  return {
+    geometry: { x: 0, y: 0, width: 1, height: 1, x2: 0, y2: 0, width2: 1, height2: 1, rotation_x: 0, rotation_y: 0, rotation_angle: 0 },
+    position: { row: 0, col: 0 },
+    info: { code: symbolToCode(symbol), symbol: [...symbol] },
+  }
+}
+
 function delMacro(index: number) {
   keyboardStore.keyMacros![pageMacrosStore.currMacro]!.splice(index, 1)
 }
@@ -60,9 +77,9 @@ function selectKeycode(row: number, col: number) {
         <div v-else class="relative m-1 flex size-full items-center justify-start gap-2">
           <template v-for="(keyCode, keyCodes_index) in keyboardStore.keyMacros![pageMacrosStore.currMacro]![index]!.keyCodes" :key="keyCodes_index">
             <Key
-              :keys="keyCode"
-              :select="selectKeycode(index, keyCodes_index)"
-              :default-key-size="38"
+              :key-info="toDisplayKey(keyCode)"
+              :highlight="selectKeycode(index, keyCodes_index)"
+              :size="38"
               @click="setKeycode($event, index, keyCodes_index)"
             />
           </template>

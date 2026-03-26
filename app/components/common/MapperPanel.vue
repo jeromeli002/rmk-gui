@@ -4,11 +4,18 @@ const emit = defineEmits<{
 }>()
 
 const keyboardStore = useKeyboardStore()
+const { t } = useI18n()
 
-const keyTabs = [
-  { value: 'base', title: 'Base' },
-  { value: 'layer', title: 'Layer' },
-]
+const keyTabs = computed(() => [
+  { value: 'base', title: t('mapper.base') },
+  { value: 'layer', title: t('mapper.layer') },
+  { value: 'macros', title: t('mapper.macros') },
+  { value: 'quantum', title: t('mapper.quantum') },
+  { value: 'backlight', title: t('mapper.backlight') },
+  { value: 'app-media-mouse', title: t('mapper.appMediaMouse') },
+  { value: 'tap-dance', title: t('mapper.tapDance') },
+  { value: 'user', title: t('mapper.user') },
+])
 
 const layerPrefix = {
   LT: 0x4000,
@@ -74,7 +81,33 @@ function parseKleLayout(layout: KeymapItem[][]): Key[] {
   })
 }
 
-const baseKeys = parseKleLayout(layout68)
+function rowsFromCodes(codes: number[]) {
+  return codes
+}
+
+function codesInRange(min: number, max: number) {
+  return Object.keys(keyCodeMap)
+    .map(Number)
+    .filter(code => code >= min && code <= max)
+    .sort((a, b) => a - b)
+}
+
+const baseKeys = parseKleLayout(layout104)
+const macroKeyCodes = computed(() => Array.from({ length: keyboardStore.macroCount ?? 0 }, (_, i) => 0x7700 + i))
+const macroControlCodes = [0x0753, 0x0754, 0x0755, 0x0756, 0x0757]
+const macroRows = computed(() => rowsFromCodes(macroKeyCodes.value))
+const quantumRows = computed(() => rowsFromCodes([
+  ...codesInRange(0x0400, 0x04FF),
+  ...codesInRange(0x0700, 0x07FF),
+  ...codesInRange(0x0800, 0x083F),
+]))
+const backlightRows = computed(() => rowsFromCodes(codesInRange(0x0600, 0x0606)))
+const appMediaMouseRows = computed(() => rowsFromCodes([
+  ...codesInRange(0x0065, 0x0065),
+  ...codesInRange(0x00A8, 0x00DF),
+]))
+const tapDanceRows = computed(() => rowsFromCodes(codesInRange(0x5700, 0x571F)))
+const userRows = computed(() => rowsFromCodes(codesInRange(0x0840, 0x085F)))
 </script>
 
 <template>
@@ -92,6 +125,39 @@ const baseKeys = parseKleLayout(layout68)
         <TabPanel value="layer">
           <div v-for="(key, index) in layerKeyCode" :key="index" class="mb-2 flex gap-2">
             <Key v-for="code in key.value" :key="code" :key-info="codeToKey(code)" @click="(_zone) => emit('setKey', codeToKey(code))" />
+          </div>
+        </TabPanel>
+        <TabPanel value="macros">
+          <div class="mb-2 flex flex-wrap gap-2">
+            <Key v-for="code in macroControlCodes" :key="code" :key-info="codeToKey(code)" @click="(_zone) => emit('setKey', codeToKey(code))" />
+          </div>
+          <div class="mb-2 flex flex-wrap gap-2">
+            <Key v-for="code in macroRows" :key="code" :key-info="codeToKey(code)" @click="(_zone) => emit('setKey', codeToKey(code))" />
+          </div>
+        </TabPanel>
+        <TabPanel value="quantum">
+          <div class="mb-2 flex flex-wrap gap-2">
+            <Key v-for="code in quantumRows" :key="code" :key-info="codeToKey(code)" @click="(_zone) => emit('setKey', codeToKey(code))" />
+          </div>
+        </TabPanel>
+        <TabPanel value="backlight">
+          <div class="mb-2 flex flex-wrap gap-2">
+            <Key v-for="code in backlightRows" :key="code" :key-info="codeToKey(code)" @click="(_zone) => emit('setKey', codeToKey(code))" />
+          </div>
+        </TabPanel>
+        <TabPanel value="app-media-mouse">
+          <div class="mb-2 flex flex-wrap gap-2">
+            <Key v-for="code in appMediaMouseRows" :key="code" :key-info="codeToKey(code)" @click="(_zone) => emit('setKey', codeToKey(code))" />
+          </div>
+        </TabPanel>
+        <TabPanel value="tap-dance">
+          <div class="mb-2 flex flex-wrap gap-2">
+            <Key v-for="code in tapDanceRows" :key="code" :key-info="codeToKey(code)" @click="(_zone) => emit('setKey', codeToKey(code))" />
+          </div>
+        </TabPanel>
+        <TabPanel value="user">
+          <div class="mb-2 flex flex-wrap gap-2">
+            <Key v-for="code in userRows" :key="code" :key-info="codeToKey(code)" @click="(_zone) => emit('setKey', codeToKey(code))" />
           </div>
         </TabPanel>
       </TabPanels>

@@ -9,16 +9,62 @@ const { keyInfo, highlight, padding = 0, size = 50 } = defineProps<{
 const emit = defineEmits<{
   (e: 'click', zone: 'outer' | 'inner'): void
 }>()
+
+const showTooltip = ref(false)
+let hoverTimer: ReturnType<typeof setTimeout> | null = null
+
+const keyDetail = computed(() => {
+  const info = keyToInfo(keyInfo.info.code)
+  return {
+    code: `0x${keyInfo.info.code.toString(16).toUpperCase().padStart(4, '0')}`,
+    name: info?.rmk ?? 'Unknown',
+  }
+})
+
+function handleMouseEnter() {
+  if (hoverTimer)
+    clearTimeout(hoverTimer)
+  hoverTimer = setTimeout(() => {
+    showTooltip.value = true
+  }, 1000)
+}
+
+function handleMouseLeave() {
+  if (hoverTimer) {
+    clearTimeout(hoverTimer)
+    hoverTimer = null
+  }
+  showTooltip.value = false
+}
+
+onBeforeUnmount(() => {
+  if (hoverTimer)
+    clearTimeout(hoverTimer)
+})
 </script>
 
 <template>
   <div
-    class="font-mono text-surface-900 dark:text-surface-100"
+    class="relative font-mono text-surface-900 dark:text-surface-100"
     :style="{
       width: `${Math.max(keyInfo.geometry.width, keyInfo.geometry.width2) * size}px`,
       height: `${Math.max(keyInfo.geometry.height, keyInfo.geometry.height2) * size}px`,
     }"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
   >
+    <div
+      v-if="showTooltip"
+      class="pointer-events-none absolute z-50 max-w-48 -translate-x-1/2 rounded-md border border-surface-300 bg-surface-0 px-2 py-1 text-xs shadow-md dark:border-surface-600 dark:bg-surface-900"
+      :style="{ left: `${Math.max(keyInfo.geometry.width, keyInfo.geometry.width2) * size / 2}px`, top: '-10px', transform: 'translate(-50%, -100%)' }"
+    >
+      <div class="font-semibold">
+        {{ keyDetail.code }}
+      </div>
+      <div class="opacity-80">
+        {{ keyDetail.name }}
+      </div>
+    </div>
     <div class="group relative" @click="emit('click', 'outer')">
       <!-- 边框 -->
       <div
@@ -65,23 +111,26 @@ const emit = defineEmits<{
       <!-- 按键名 -->
       <span
         v-if="keyInfo.info.symbol[0] === null"
-        class="absolute" :class="{ 'text-xl': keyInfo.info.symbol[1]!.length === 1 }" style="transform: translate(-50%, -50%)"
+        class="absolute max-w-[96%] overflow-hidden break-all text-center leading-tight"
+        :class="{ 'text-xl': (keyInfo.info.symbol[1]?.length ?? 0) === 1, 'text-xs': (keyInfo.info.symbol[1]?.length ?? 0) > 1 }"
+        style="transform: translate(-50%, -50%); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;"
         :style="{
           top: `${keyInfo.geometry.height / 2 * size}px`,
           left: `${keyInfo.geometry.width / 2 * size}px`,
         }"
       >
-        {{ keyInfo.info.symbol[1] }}
+        {{ keyInfo.info.symbol[1] ?? '' }}
       </span>
       <span
         v-else
-        class="absolute whitespace-nowrap" style="transform: translate(-50%, -50%)"
+        class="absolute max-w-[96%] overflow-hidden break-all text-center text-xs leading-tight"
+        style="transform: translate(-50%, -50%); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;"
         :style="{
           top: `${padding + (keyInfo.geometry.height * size - 2 * padding) / 5}px`,
           left: `${keyInfo.geometry.width / 2 * size}px`,
         }"
       >
-        {{ keyInfo.info.symbol[0] }}
+        {{ keyInfo.info.symbol[0] ?? '' }}
       </span>
     </div>
     <!-- 副按键 -->
@@ -110,13 +159,14 @@ const emit = defineEmits<{
       />
 
       <span
-        class="absolute whitespace-nowrap" style="transform: translate(-50%, -50%)"
+        class="absolute max-w-[96%] overflow-hidden break-all text-center text-xs leading-tight"
+        style="transform: translate(-50%, -50%); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;"
         :style="{
           top: `${padding + (keyInfo.geometry.height * size - 2 * padding) / 5 * 3.5}px`,
           left: `${keyInfo.geometry.width / 2 * size}px`,
         }"
       >
-        {{ keyInfo.info.symbol[1] }}
+        {{ keyInfo.info.symbol[1] ?? '' }}
       </span>
     </div>
   </div>

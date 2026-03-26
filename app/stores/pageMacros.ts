@@ -7,7 +7,12 @@ export const usePageMacrosStore = defineStore('pageMacros', () => {
     showMapperPanel.value = false
   }
 
-  const operationData = ref<MacroAction[]>(Object.keys(MacroCode).filter(key => !Number.isNaN(Number(key))).filter(key => !['1', '5', '6', '7'].includes(key)).map(key => fromMacroCode(fromU8(Number(key)))))
+  const operationData = ref<MacroAction[]>(
+    Object.keys(MacroCode)
+      .filter(key => !Number.isNaN(Number(key)))
+      .filter(key => !['1', '5', '6', '7'].includes(key))
+      .map(key => fromMacroCode(fromU8(Number(key)))),
+  )
 
   return { currMacro, currKey, clearSelectedProps, operationData, showMapperPanel }
 })

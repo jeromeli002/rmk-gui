@@ -1,4 +1,17 @@
 export const useKeyboardStore = defineStore('keyboard', () => {
+  function parseLabelPair(label: string | null | undefined): [number, number] | null {
+    if (!label)
+      return null
+    const [a, b] = label.split(',')
+    if (a == null || b == null)
+      return null
+    const first = Number(a)
+    const second = Number(b)
+    if (Number.isNaN(first) || Number.isNaN(second))
+      return null
+    return [first, second]
+  }
+
   const hidDevice = ref<HIDInterface | null>(null)
   const vialDevice = ref<VialInterface | null>(null)
   const api = ref<HIDApi | null>(null)
@@ -96,18 +109,147 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     }
 
     const pikeGeo = (k: any) => pick(k, ['x', 'y', 'width', 'height', 'x2', 'y2', 'width2', 'height2', 'rotation_x', 'rotation_y', 'rotation_angle'])
-    return kleDefinition.value.keys.map((k) => {
-      const [row, col] = k.labels[0]!.split(',').map(Number)
-      const keycode = layoutKeymap.value!.get([layer, row!, col!])!
-      return {
+    const keys: Key[] = []
+
+    for (const k of kleDefinition.value.keys) {
+      const isEncoder = k.labels.some((label: string | null) => label?.trim().toLowerCase() === 'e')
+      if (isEncoder) {
+        continue
+      }
+
+      const pair = parseLabelPair(k.labels[0])
+      if (!pair) {
+        continue
+      }
+      const [row, col] = pair
+
+      const keycode = layoutKeymap.value!.get([layer, row, col])
+      if (keycode === undefined) {
+        continue
+      }
+
+      keys.push({
         geometry: pikeGeo(k),
         position: { row, col },
         info: {
           code: keycode,
           symbol: [...keyToLable(keycode)],
         },
-      } as Key
-    })
+      } as Key)
+    }
+
+    return keys
+  }
+
+  const encoderKeymap = ref(new StringMap<[number, number, number], number>())
+  async function fetchEncoderMap() {
+    if (!vialDevice.value) {
+      throw new Error('Vial device not available')
+    }
+    if (!layerCount.value) {
+      throw new Error('Layer count not available')
+    }
+    if (!kleDefinition.value) {
+      throw new Error('KLE definition not available')
+    }
+
+    const encoderIndexes = new Set<number>()
+    for (const k of kleDefinition.value.keys) {
+      const isEncoder = k.labels.some((label: string | null) => label?.trim().toLowerCase() === 'e')
+      if (!isEncoder)
+        continue
+
+      const pair = parseLabelPair(k.labels[0])
+      if (!pair)
+        continue
+
+      const [encoderIdxRaw] = pair
+      encoderIndexes.add(encoderIdxRaw)
+    }
+
+    const nextMap = new StringMap<[number, number, number], number>()
+    for (let layer = 0; layer < layerCount.value; layer++) {
+      for (const encoderIdx of encoderIndexes) {
+        const ccw = await vialDevice.value.encoderKeycode(layer, encoderIdx, 'ccw')
+        const cw = await vialDevice.value.encoderKeycode(layer, encoderIdx, 'cw')
+        nextMap.set([layer, encoderIdx, 0], ccw)
+        nextMap.set([layer, encoderIdx, 1], cw)
+      }
+    }
+    encoderKeymap.value = nextMap
+  }
+
+  function fetchEncoderList(layer: number) {
+    if (!layerCount.value) {
+      throw new Error('Layer count not available')
+    }
+    if (!kleDefinition.value) {
+      throw new Error('KLE definition not available')
+    }
+    if (!encoderKeymap.value) {
+      throw new Error('Encoder keymap not available')
+    }
+    if (layer >= layerCount.value) {
+      throw new Error('Invalid layer')
+    }
+
+    interface EncoderEntry {
+      encoder: number
+      direction: 'ccw' | 'cw'
+      geometry: Pick<Key['geometry'], 'x' | 'y' | 'width' | 'height'>
+      position: { row: number, col: number }
+      info: { code: number, symbol: [string | null, string | null] }
+    }
+    const encoders = new Map<number, {
+      index: number
+      ccw: EncoderEntry | null
+      cw: EncoderEntry | null
+    }>()
+
+    for (const k of kleDefinition.value.keys) {
+      const isEncoder = k.labels.some((label: string | null) => label?.trim().toLowerCase() === 'e')
+      if (!isEncoder) {
+        continue
+      }
+
+      const pair = parseLabelPair(k.labels[0])
+      if (!pair) {
+        continue
+      }
+      const [encoderIdxRaw, directionRaw] = pair
+
+      const keycode = encoderKeymap.value.get([layer, encoderIdxRaw, directionRaw])
+      if (keycode === undefined) {
+        continue
+      }
+
+      const direction = directionRaw === 0 ? 'ccw' : directionRaw === 1 ? 'cw' : null
+      if (!direction) {
+        continue
+      }
+
+      const info: EncoderEntry = {
+        encoder: encoderIdxRaw,
+        direction,
+        geometry: pick(k, ['x', 'y', 'width', 'height']),
+        position: { row: encoderIdxRaw, col: directionRaw },
+        info: {
+          code: keycode,
+          symbol: [...keyToLable(keycode)] as [string | null, string | null],
+        },
+      }
+
+      if (!encoders.has(encoderIdxRaw)) {
+        encoders.set(encoderIdxRaw, { index: encoderIdxRaw, ccw: null, cw: null })
+      }
+      const group = encoders.get(encoderIdxRaw)!
+      if (direction === 'ccw')
+        group.ccw = info
+      else
+        group.cw = info
+    }
+
+    return Array.from(encoders.values()).sort((a, b) => a.index - b.index)
   }
 
   const keyMacros = ref<Array<Array<MacroAction>> | null>(null)
@@ -128,6 +270,24 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     await vialDevice.value.setKeycode(lyrRowCol, keycode)
   };
 
+  async function saveMacros() {
+    if (!vialDevice.value) {
+      throw new Error('Vial device not available')
+    }
+    if (!keyMacros.value || !macroCount.value) {
+      throw new Error('Macros not available')
+    }
+    await vialDevice.value.setMacros(keyMacros.value, macroCount.value)
+  }
+
+  async function setEncoderKeycode(layer: number, encoderIdx: number, direction: 'ccw' | 'cw', keycode: number) {
+    if (!vialDevice.value) {
+      throw new Error('Vial device not available')
+    }
+    await vialDevice.value.setEncoderKeycode(layer, encoderIdx, direction, keycode)
+    encoderKeymap.value.set([layer, encoderIdx, direction === 'cw' ? 1 : 0], keycode)
+  }
+
   async function fetchAll() {
     // 并行会报错
     await fetchProductName()
@@ -137,6 +297,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     fetchKleDefinition()
     await fetchKeymap()
     fetchLayoutKeymap()
+    await fetchEncoderMap()
     await fetchMacros()
   }
 
@@ -148,6 +309,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     kleDefinition.value = null
     keymap.value = null
     layoutKeymap.value = null
+    encoderKeymap.value = new StringMap<[number, number, number], number>()
     keyMacros.value = null
   }
 
@@ -204,6 +366,8 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     layoutKeymap,
     fetchLayoutKeymap,
     fetchKeyList,
+    fetchEncoderMap,
+    fetchEncoderList,
     keyMacros,
     fetchAll,
     cleanAll,
@@ -212,5 +376,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     disconnect,
     isConnected,
     setKeycode,
+    setEncoderKeycode,
+    saveMacros,
   }
 })

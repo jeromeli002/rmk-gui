@@ -71,6 +71,64 @@ export class VialDevice implements VialInterface {
     return result
   }
 
+  private symbolToKeycode(symbol: [string | null, string | null]): number {
+    const normalized = JSON.stringify(symbol)
+    for (const [code, info] of Object.entries(keyCodeMap)) {
+      if (JSON.stringify(info.symbol) === normalized) {
+        return Number(code)
+      }
+    }
+    return 0
+  }
+
+  private serializeMacroAction(action: MacroAction): number[] {
+    if (action.type === MacroCode.Text) {
+      return Array.from((action.text ?? '').slice(0, 255)).map(c => c.charCodeAt(0))
+    }
+
+    if (action.type === MacroCode.Delay) {
+      const delay = Math.max(0, action.delay ?? 0)
+      const delay1 = (delay % 255) + 1
+      const delay2 = Math.floor(delay / 255) + 1
+      return [MacroCode.Prefix, MacroCode.Delay, delay1, delay2]
+    }
+
+    if (!action.keyCodes || action.keyCodes.length === 0)
+      return []
+
+    const bytes: number[] = []
+    for (const key of action.keyCodes) {
+      const code = this.symbolToKeycode(key)
+      const low = code & 0xFF
+      const high = (code >> 8) & 0xFF
+
+      if (high === 0) {
+        const baseType = action.type === MacroCode.ExtTap
+          ? MacroCode.Tap
+          : action.type === MacroCode.ExtDown ? MacroCode.Down : action.type === MacroCode.ExtUp ? MacroCode.Up : action.type
+        bytes.push(MacroCode.Prefix, baseType, low)
+      }
+      else {
+        const extType = action.type === MacroCode.Tap
+          ? MacroCode.ExtTap
+          : action.type === MacroCode.Down ? MacroCode.ExtDown : action.type === MacroCode.Up ? MacroCode.ExtUp : action.type
+        bytes.push(MacroCode.Prefix, extType, low, high)
+      }
+    }
+    return bytes
+  }
+
+  private serializeMacros(macros: Array<Array<MacroAction>>): number[] {
+    const payload: number[] = []
+    for (const macro of macros) {
+      for (const action of macro) {
+        payload.push(...this.serializeMacroAction(action))
+      }
+      payload.push(0)
+    }
+    return payload
+  }
+
   private keyCodeFromBytes(bytes: number[]): KeyInfo {
     const value = bytes[1]
     if (value && keyCodeMap[value]) {
@@ -242,7 +300,15 @@ export class VialDevice implements VialInterface {
   ): IndexMap {
     const layoutKeymap = new StringMap<[number, number, number], number>()
     for (const key of layout.keys) {
+      const isEncoder = key.labels.some((label: string | null) => label?.trim().toLowerCase() === 'e')
+      if (isEncoder) {
+        continue
+      }
+
       const [row, col] = key.labels[0]!.split(',').map(n => Number.parseInt(n, 10))
+      if (Number.isNaN(row) || Number.isNaN(col)) {
+        continue
+      }
       for (let layer = 0; layer < layerCount; layer++) {
         const keycode = keymap.get([layer, row!, col!])
         if (keycode !== undefined) {
@@ -287,8 +353,41 @@ export class VialDevice implements VialInterface {
     return deserializedMacros
   };
 
+  async setMacros(macros: Array<Array<MacroAction>>, count: number): Promise<void> {
+    const sizeData = await this.device.writeRead([VialConstants.Command.GetMacroBufferSize])
+    const macroSize = this.readU16(sizeData, 1)
+    const serialized = this.serializeMacros(macros.slice(0, count))
+    const buffer = new Uint8Array(macroSize)
+    buffer.set(serialized.slice(0, macroSize))
+
+    for (let i = 0; i < Math.ceil(macroSize / VialConstants.BUFFER_CHUNK_SIZE); i++) {
+      const writeSize = Math.min(VialConstants.BUFFER_CHUNK_SIZE, macroSize - i * VialConstants.BUFFER_CHUNK_SIZE)
+      const msg = new Uint8Array(32)
+      msg[0] = VialConstants.Command.SetMacroBuffer
+      msg[1] = (i * VialConstants.BUFFER_CHUNK_SIZE) >> 8
+      msg[2] = (i * VialConstants.BUFFER_CHUNK_SIZE) & 0xFF
+      msg[3] = writeSize
+      for (let j = 0; j < writeSize; j++) {
+        msg[4 + j] = buffer[i * VialConstants.BUFFER_CHUNK_SIZE + j]!
+      }
+      await this.device.writeRead(Array.from(msg))
+    }
+  }
+
   async setKeycode(lyrRowCol: [number, number, number], keycode: number): Promise<void> {
     const msg = [VialConstants.Command.SetKeycode, ...lyrRowCol, (keycode >> 8) & 0xFF, keycode & 0xFF]
+    await this.device.writeRead(msg)
+  }
+
+  async encoderKeycode(layer: number, encoderIdx: number, direction: 'ccw' | 'cw'): Promise<number> {
+    const dir = direction === 'cw' ? 1 : 0
+    const data = await this.device.writeRead([VialConstants.Command.VialPrefix, VialConstants.Command.GetEncoder, layer, encoderIdx, dir])
+    return (data[0]! << 8) | data[1]!
+  }
+
+  async setEncoderKeycode(layer: number, encoderIdx: number, direction: 'ccw' | 'cw', keycode: number): Promise<void> {
+    const dir = direction === 'cw' ? 1 : 0
+    const msg = [VialConstants.Command.VialPrefix, VialConstants.Command.SetEncoder, layer, encoderIdx, dir, (keycode >> 8) & 0xFF, keycode & 0xFF]
     await this.device.writeRead(msg)
   }
 }

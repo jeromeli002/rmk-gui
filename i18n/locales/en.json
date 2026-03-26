@@ -16,5 +16,22 @@
       "primary": "Primary Color",
       "surface": "Surface Color"
     }
+  },
+  "mapper": {
+    "base": "Base",
+    "layer": "Layer",
+    "macros": "Macros",
+    "quantum": "Quantum",
+    "backlight": "Backlight",
+    "appMediaMouse": "App Media and Mouse",
+    "tapDance": "Tap Dance",
+    "user": "User"
+  },
+  "macros": {
+    "save": "Save Macros"
+  },
+  "combos": {
+    "add": "Add Combo",
+    "outputKey": "output key"
   }
 }

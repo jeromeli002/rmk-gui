@@ -18,5 +18,22 @@
       "primary": "强调色",
       "surface": "背景色"
     }
+  },
+  "mapper": {
+    "base": "基础",
+    "layer": "层",
+    "macros": "宏",
+    "quantum": "量子",
+    "backlight": "背光",
+    "appMediaMouse": "应用/媒体/鼠标",
+    "tapDance": "连击",
+    "user": "用户"
+  },
+  "macros": {
+    "save": "保存宏"
+  },
+  "combos": {
+    "add": "新增组合",
+    "outputKey": "输出键"
   }
 }

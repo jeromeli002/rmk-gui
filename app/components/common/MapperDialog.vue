@@ -32,6 +32,6 @@ const pageMacrosStore = usePageMacrosStore()
     pt:content:class="!p-0"
     pt:title:class="!pl-3 !text-lg text-surface-800 dark:text-surface-200"
   >
-    <MapperPanel :area="pageMacrosStore.currKey[3]" @set-keycode="emit('setKeycode', $event)" />
+    <MapperPanel :area="pageMacrosStore.currKey[3]" @set-key="(key) => emit('setKeycode', key.info.code)" />
   </Dialog>
 </template>

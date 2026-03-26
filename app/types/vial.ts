@@ -13,7 +13,10 @@ export interface VialInterface {
     layerCount: number
   ) => IndexMap
   macros: (count: number) => Promise<Array<Array<MacroAction>>>
+  setMacros: (macros: Array<Array<MacroAction>>, count: number) => Promise<void>
   setKeycode: (lyrRowCol: [number, number, number], keycode: number) => Promise<void>
+  encoderKeycode: (layer: number, encoderIdx: number, direction: EncoderDirection) => Promise<number>
+  setEncoderKeycode: (layer: number, encoderIdx: number, direction: EncoderDirection, keycode: number) => Promise<void>
 }
 
 export interface CustomKeycode {
@@ -31,6 +34,7 @@ export type KeymapItem
       x?: number
       y?: number
       w?: number
+      h?: number
     }
 
 export interface Layout {
@@ -59,6 +63,27 @@ export interface Key {
     code: number
     symbol: [string | null, string | null]
   }
+}
+
+export type EncoderDirection = 'ccw' | 'cw'
+
+export interface EncoderBinding {
+  encoder: number
+  direction: EncoderDirection
+  position: {
+    row: number
+    col: number
+  }
+  info: {
+    code: number
+    symbol: [string | null, string | null]
+  }
+}
+
+export interface Encoder {
+  index: number
+  ccw: EncoderBinding | null
+  cw: EncoderBinding | null
 }
 
 export interface VialJson {

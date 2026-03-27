@@ -39,6 +39,18 @@ const layerKeyCode = [
   })),
 ]
 function codeToKey(keycode: number): Key {
+  const customKeycodes = keyboardStore.vialJson?.customKeycodes || []
+  let symbol = [...keyToLable(keycode)]
+  
+  // 检查是否是user键
+  if (keycode >= 0x0840 && keycode <= 0x085F) {
+    const index = keycode - 0x0840
+    if (index < customKeycodes.length) {
+      // 设置symbol[0]为null，symbol[1]为shortName，这样会在中间显示且没有横杠
+      symbol = [null, customKeycodes[index].shortName]
+    }
+  }
+  
   return {
     geometry: {
       x: 0,
@@ -59,7 +71,7 @@ function codeToKey(keycode: number): Key {
     },
     info: {
       code: keycode,
-      symbol: [...keyToLable(keycode)],
+      symbol,
     },
   }
 }
@@ -107,7 +119,13 @@ const appMediaMouseRows = computed(() => rowsFromCodes([
   ...codesInRange(0x00A8, 0x00DF),
 ]))
 const tapDanceRows = computed(() => rowsFromCodes(codesInRange(0x5700, 0x571F)))
-const userRows = computed(() => rowsFromCodes(codesInRange(0x0840, 0x085F)))
+const userRows = computed(() => {
+  const customKeycodes = keyboardStore.vialJson?.customKeycodes || []
+  if (customKeycodes.length > 0) {
+    return customKeycodes.map((_, index) => 0x0840 + index)
+  }
+  return rowsFromCodes(codesInRange(0x0840, 0x085F))
+})
 </script>
 
 <template>

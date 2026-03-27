@@ -5,11 +5,11 @@ const macroTotal = computed(() => keyboardStore.macroCount ?? keyboardStore.keyM
 const saving = ref(false)
 
 const addList = ref<MacroAction[]>([
-  { type: 0, name: 'Tap', keyCodes: [] },
-  { type: 2, name: 'Down', keyCodes: [] },
-  { type: 3, name: 'Up', keyCodes: [] },
-  { type: 4, name: 'Delay', delay: null },
-  { type: 9, name: 'Text', text: null },
+  { type: 0, name: $t('macros.tap'), keyCodes: [] },
+  { type: 2, name: $t('macros.down'), keyCodes: [] },
+  { type: 3, name: $t('macros.up'), keyCodes: [] },
+  { type: 4, name: $t('macros.delay'), delay: null },
+  { type: 9, name: $t('macros.text'), text: null },
 ])
 
 function setMapperKeycode(key: number) {
@@ -48,7 +48,7 @@ async function saveMacros() {
     v-if="!keyboardStore.keyMacros || macroTotal === 0"
     class="flex size-full items-center justify-center text-surface-500 dark:text-surface-400"
   >
-    Macros unavailable. Connect keyboard and refresh data.
+    {{ $t('macros.unavailable') }}
   </div>
   <div
     v-else

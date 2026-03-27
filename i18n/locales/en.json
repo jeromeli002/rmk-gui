@@ -6,7 +6,8 @@
     "macros": "Macros",
     "combos": "Combos",
     "export": "Export",
-    "settings": "Settings"
+    "settings": "Settings",
+    "powerSaving": "Power Saving"
   },
   "settings": {
     "general": {
@@ -33,5 +34,79 @@
   "combos": {
     "add": "Add Combo",
     "outputKey": "output key"
+  },
+  "powerSaving": {
+    "title": "Power Saving",
+    "enableSleep": "Enable Sleep Mode",
+    "sleepTimeout": "Sleep Timeout",
+    "sleepTimeoutDesc": "Idle time before keyboard enters sleep mode",
+    "backlightTimeout": "Backlight Timeout",
+    "backlightTimeoutDesc": "Time before keyboard backlight turns off automatically",
+    "lowPowerMode": "Low Power Mode",
+    "lowPowerModeDesc": "Reduce keyboard power consumption when enabled",
+    "minutes": "minutes",
+    "seconds": "seconds",
+    "never": "Never"
+  },
+  "dialog": {
+    "selectKey": "Select Key",
+    "editKeycode": "Edit Keycode",
+    "cancel": "Cancel",
+    "save": "Save",
+    "keycode": "Keycode (Decimal)",
+    "hex": "Hexadecimal",
+    "keycodeName": "Keycode Name",
+    "modifiers": "Modifiers",
+    "left": "Left",
+    "right": "Right",
+    "preview": "Preview",
+    "placeholder": {
+      "keycode": "Full Keycode",
+      "hex": "0x0000",
+      "keyName": "e.g., KC_A"
+    }
+  },
+  "macros": {
+    "save": "Save Macros",
+    "unavailable": "Macros unavailable. Connect keyboard and refresh data.",
+    "tap": "Tap",
+    "down": "Down",
+    "up": "Up",
+    "delay": "Delay",
+    "text": "Text"
+  },
+  "export": {
+    "title": "Export/Import",
+    "matrix": "Keyboard Matrix",
+    "matrixDesc": "KLE layout position coordinates of keyboard keys",
+    "keymap": "Keymap Layers",
+    "keymapDesc": "Keycode configuration for each layer at matrix positions",
+    "export": "Export",
+    "import": "Import",
+    "exportSuccess": "Export successful",
+    "exportFailed": "Export failed",
+    "importSuccess": "Import successful",
+    "importConfirm": "Are you sure you want to import this keymap backup? This will overwrite your current keymap settings.",
+    "importFailed": "Import failed",
+    "invalidFormat": "Invalid format",
+    "exportAllLayers": "Export all layers",
+    "exportCurrentLayer": "Export current layer",
+    "selectFile": "Select File",
+    "dragDrop": "or drag and drop file here",
+    "backupFile": "Backup File",
+    "layer": "Layer",
+    "vialJson": "Vial Definition File",
+    "exportVialJson": "Export Vial.json",
+    "exportVialJsonDesc": "Export keyboard hardware definition file for Vial website",
+    "keymapBackup": "Keymap Configuration Backup",
+    "exportKeymap": "Export Keymap",
+    "importKeymap": "Import Keymap",
+    "exportKeymapDesc": "Export complete keycode configuration for all keyboard layers",
+    "importKeymapDesc": "Import previously backed up keycode configuration data",
+    "viewAllLayers": "View all layers",
+    "viewCurrentLayer": "View current layer only"
+  },
+  "keymap": {
+    "encoder": "Encoder"
   }
 }

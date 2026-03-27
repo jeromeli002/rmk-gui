@@ -8,6 +8,7 @@ const { keyInfo, highlight, padding = 0, size = 50 } = defineProps<{
 
 const emit = defineEmits<{
   (e: 'click', zone: 'outer' | 'inner'): void
+  (e: 'dblclick', zone: 'outer' | 'inner'): void
 }>()
 
 const showTooltip = ref(false)
@@ -65,7 +66,7 @@ onBeforeUnmount(() => {
         {{ keyDetail.name }}
       </div>
     </div>
-    <div class="group relative" @click="emit('click', 'outer')">
+    <div class="group relative" @click="emit('click', 'outer')" @dblclick="emit('dblclick', 'outer')">
       <!-- 边框 -->
       <div
         class="rounded-prime-md absolute bg-surface-400 shadow-sm shadow-surface-400 dark:bg-surface-800 dark:shadow-surface-800"
@@ -138,6 +139,7 @@ onBeforeUnmount(() => {
       v-if="keyInfo.info.symbol[0] !== null"
       class="group relative"
       @click="emit('click', 'inner')"
+      @dblclick="emit('dblclick', 'inner')"
     >
       <div
         class="rounded-prime-md absolute bg-surface-400 opacity-0 group-active:opacity-100 dark:bg-surface-800"

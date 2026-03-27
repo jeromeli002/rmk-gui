@@ -23,7 +23,7 @@ const pageMacrosStore = usePageMacrosStore()
 <template>
   <Dialog
     v-model:visible="visible"
-    header="Select Key"
+    :header="$t('dialog.selectKey')"
     class="!m-0 h-[430px] overflow-hidden p-3"
     :style="{ width: screenWidth > 1225 ? '1000px' : screenWidth > 1050 ? '830px' : '730px' }"
     position="bottom"

@@ -110,6 +110,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
 
     const pikeGeo = (k: any) => pick(k, ['x', 'y', 'width', 'height', 'x2', 'y2', 'width2', 'height2', 'rotation_x', 'rotation_y', 'rotation_angle'])
     const keys: Key[] = []
+    const customKeycodes = vialJson.value?.customKeycodes || []
 
     for (const k of kleDefinition.value.keys) {
       const isEncoder = k.labels.some((label: string | null) => label?.trim().toLowerCase() === 'e')
@@ -128,12 +129,22 @@ export const useKeyboardStore = defineStore('keyboard', () => {
         continue
       }
 
+      let symbol = [...keyToLable(keycode)]
+      // 检查是否是user键
+      if (keycode >= 0x0840 && keycode <= 0x085F) {
+        const index = keycode - 0x0840
+        if (index < customKeycodes.length) {
+          // 设置symbol[0]为null，symbol[1]为shortName，这样会在中间显示且没有横杠
+          symbol = [null, customKeycodes[index].shortName]
+        }
+      }
+
       keys.push({
         geometry: pikeGeo(k),
         position: { row, col },
         info: {
           code: keycode,
-          symbol: [...keyToLable(keycode)],
+          symbol,
         },
       } as Key)
     }
@@ -205,6 +216,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
       ccw: EncoderEntry | null
       cw: EncoderEntry | null
     }>()
+    const customKeycodes = vialJson.value?.customKeycodes || []
 
     for (const k of kleDefinition.value.keys) {
       const isEncoder = k.labels.some((label: string | null) => label?.trim().toLowerCase() === 'e')
@@ -228,6 +240,16 @@ export const useKeyboardStore = defineStore('keyboard', () => {
         continue
       }
 
+      let symbol = [...keyToLable(keycode)] as [string | null, string | null]
+      // 检查是否是user键
+      if (keycode >= 0x0840 && keycode <= 0x085F) {
+        const index = keycode - 0x0840
+        if (index < customKeycodes.length) {
+          // 设置symbol[0]为null，symbol[1]为shortName，这样会在中间显示且没有横杠
+          symbol = [null, customKeycodes[index].shortName]
+        }
+      }
+
       const info: EncoderEntry = {
         encoder: encoderIdxRaw,
         direction,
@@ -235,7 +257,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
         position: { row: encoderIdxRaw, col: directionRaw },
         info: {
           code: keycode,
-          symbol: [...keyToLable(keycode)] as [string | null, string | null],
+          symbol,
         },
       }
 

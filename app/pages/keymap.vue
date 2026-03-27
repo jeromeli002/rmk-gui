@@ -15,11 +15,15 @@ const currEncoder = ref<{
   geometry: { x: number, y: number, width: number, height: number }
   info: { code: number, symbol: [string | null, string | null] }
 } | null>(null)
+
+const showKeycodeEditor = ref(false)
+const editingKey = ref<Key | null>(null)
+const editingZone = ref<'outer' | 'inner'>('outer')
 const keys = computed(() => keyboardStore.fetchKeyList(currLayer.value))
 const encoders = computed(() => keyboardStore.fetchEncoderList(currLayer.value))
 const layerOption = Array.from({ length: keyboardStore.layerCount! }, (_, i) => i.toString())
 const keySize = 64
-const encoderButtonSize = 46
+const encoderButtonSize = 56
 
 const highlight = computed(() => {
   const map = new StringMap<[number, number], 'outer' | 'inner'>()
@@ -84,10 +88,43 @@ function handleSetKey(key: Key) {
   }
 }
 
+function handleDblClick(key: Key, zone: 'outer' | 'inner') {
+  editingKey.value = key
+  editingZone.value = zone
+  showKeycodeEditor.value = true
+}
+
+async function handleSaveKeycode(keycode: number) {
+  if (!editingKey.value)
+    return
+
+  // 检查是否是编码器
+  if ('encoder' in editingKey.value) {
+    // 编码器
+    await keyboardStore.setEncoderKeycode(currLayer.value, editingKey.value.encoder, editingKey.value.direction, keycode)
+  } else {
+    // 普通按键
+    const [row, col] = [editingKey.value.position.row, editingKey.value.position.col]
+    const currKeyPos: [number, number, number] = [currLayer.value, row, col]
+
+    let code = keycode
+    if (editingZone.value === 'inner') {
+      const currKeyCode = keyboardStore.layoutKeymap!.get(currKeyPos) ?? 0
+      code = (currKeyCode & 0xFF00) + (keycode & 0x00FF)
+    }
+
+    keyboardStore.setKeycode(currKeyPos, code)
+    keyboardStore.layoutKeymap!.set(currKeyPos, code)
+  }
+
+  editingKey.value = null
+  showKeycodeEditor.value = false
+}
+
 function getEncoderLabel(binding: NonNullable<typeof currEncoder.value>) {
   const label = binding.info.symbol[1] ?? ''
   if (/^e\d+$/i.test(label.trim())) {
-    return ''
+    return $t('keymap.encoder')
   }
   return label
 }
@@ -162,31 +199,39 @@ function getEncoderButtonStyle(binding: NonNullable<typeof currEncoder.value>) {
         <SelectButton v-model="currLayerStr" :allow-empty="false" :options="layerOption" size="small" />
       </div>
       <div class="relative" :style="boardStyle">
-        <Keyboard :keys="keys" :key-size="keySize" :highlight="highlight" :style="keyboardStyle" @click="handleSelected" />
+        <Keyboard :keys="keys" :key-size="keySize" :highlight="highlight" :style="keyboardStyle" @click="handleSelected" @dblclick="handleDblClick" />
         <template v-for="encoder in encoders" :key="encoder.index">
           <button
             v-if="encoder.ccw"
-            class="absolute z-20 flex items-center justify-center rounded-full border-2 border-surface-400 bg-surface-50 text-[10px] dark:border-surface-500 dark:bg-surface-700"
+            class="absolute z-20 flex items-center justify-center w-[56px] h-[56px] rounded-full border-2 border-surface-400 bg-surface-100 text-xs shadow-sm dark:border-surface-500 dark:bg-surface-800"
             :class="{ '!border-primary !text-primary': currEncoder?.encoder === encoder.index && currEncoder?.direction === 'ccw' }"
             :style="getEncoderButtonStyle(encoder.ccw)"
             @click="handleSelectEncoder(encoder.ccw)"
+            @dblclick="handleDblClick(encoder.ccw as any, 'outer')"
           >
             <Icon name="tabler:rotate-2" class="absolute left-1 top-1 text-sm" />
-            <span>{{ getEncoderLabel(encoder.ccw) }}</span>
+            <span class="max-w-[80%] text-center break-all leading-tight">{{ getEncoderLabel(encoder.ccw) }}</span>
           </button>
           <button
             v-if="encoder.cw"
-            class="absolute z-20 flex items-center justify-center rounded-full border-2 border-surface-400 bg-surface-50 text-[10px] dark:border-surface-500 dark:bg-surface-700"
+            class="absolute z-20 flex items-center justify-center w-[56px] h-[56px] rounded-full border-2 border-surface-400 bg-surface-100 text-xs shadow-sm dark:border-surface-500 dark:bg-surface-800"
             :class="{ '!border-primary !text-primary': currEncoder?.encoder === encoder.index && currEncoder?.direction === 'cw' }"
             :style="getEncoderButtonStyle(encoder.cw)"
             @click="handleSelectEncoder(encoder.cw)"
+            @dblclick="handleDblClick(encoder.cw as any, 'outer')"
           >
             <Icon name="tabler:rotate-clockwise-2" class="absolute right-1 top-1 text-sm" />
-            <span>{{ getEncoderLabel(encoder.cw) }}</span>
+            <span class="max-w-[80%] text-center break-all leading-tight">{{ getEncoderLabel(encoder.cw) }}</span>
           </button>
         </template>
       </div>
       <MapperPanel @set-key="handleSetKey" />
     </div>
   </div>
+
+  <KeycodeEditor
+    v-model:visible="showKeycodeEditor"
+    :key-info="editingKey"
+    @save="handleSaveKeycode"
+  />
 </template>

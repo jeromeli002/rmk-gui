@@ -3,12 +3,13 @@
     "waitingForKeyboard": "等待键盘连接"
   },
   "aside": {
-    "home": "Home",
-    "keymap": "Keymap",
-    "macros": "Macros",
-    "combos": "Combos",
-    "export": "Export",
-    "settings": "Settings"
+    "home": "主页",
+    "keymap": "映射按键",
+    "macros": "宏",
+    "combos": "组合键",
+    "export": "导出",
+    "settings": "设置",
+    "powerSaving": "省电模式"
   },
   "settings": {
     "general": {
@@ -35,5 +36,79 @@
   "combos": {
     "add": "新增组合",
     "outputKey": "输出键"
+  },
+  "powerSaving": {
+    "title": "省电设置",
+    "enableSleep": "启用睡眠模式",
+    "sleepTimeout": "睡眠超时时间",
+    "sleepTimeoutDesc": "键盘进入睡眠模式前的空闲时间",
+    "backlightTimeout": "背光超时时间",
+    "backlightTimeoutDesc": "键盘背光自动关闭前的时间",
+    "lowPowerMode": "低功耗模式",
+    "lowPowerModeDesc": "启用后降低键盘功耗",
+    "minutes": "分钟",
+    "seconds": "秒",
+    "never": "永不"
+  },
+  "dialog": {
+    "selectKey": "选择按键",
+    "editKeycode": "编辑键码",
+    "cancel": "取消",
+    "save": "保存",
+    "keycode": "键码 (十进制)",
+    "hex": "十六进制",
+    "keycodeName": "键码名称",
+    "modifiers": "修饰键",
+    "left": "左",
+    "right": "右",
+    "preview": "预览",
+    "placeholder": {
+      "keycode": "完整键码",
+      "hex": "0x0000",
+      "keyName": "如：KC_A"
+    }
+  },
+  "macros": {
+    "save": "保存宏",
+    "unavailable": "宏不可用。请连接键盘并刷新数据。",
+    "tap": "敲击",
+    "down": "按下",
+    "up": "抬起",
+    "delay": "延迟",
+    "text": "文本"
+  },
+  "export": {
+    "title": "导出/导入",
+    "matrix": "键盘矩阵",
+    "matrixDesc": "键盘按键的 KLE 布局位置坐标",
+    "keymap": "键位图层",
+    "keymapDesc": "矩阵各位置上每个层的键码配置",
+    "export": "导出",
+    "import": "导入",
+    "exportSuccess": "导出成功",
+    "exportFailed": "导出失败",
+    "importSuccess": "导入成功",
+    "importConfirm": "确定要导入这个键位备份吗？这将覆盖当前的键位设置。",
+    "importFailed": "导入失败",
+    "invalidFormat": "无效的格式",
+    "exportAllLayers": "导出所有层",
+    "exportCurrentLayer": "导出当前层",
+    "selectFile": "选择文件",
+    "dragDrop": "或将文件拖放到此处",
+    "backupFile": "备份文件",
+    "layer": "层",
+    "vialJson": "Vial 定义文件",
+    "exportVialJson": "导出 Vial.json",
+    "exportVialJsonDesc": "导出键盘硬件定义文件，可用于 Vial 网站加载",
+    "keymapBackup": "键码配置备份",
+    "exportKeymap": "导出键码",
+    "importKeymap": "导入键码",
+    "exportKeymapDesc": "导出键盘所有层的完整键码配置",
+    "importKeymapDesc": "导入之前备份的键码配置数据",
+    "viewAllLayers": "显示所有层",
+    "viewCurrentLayer": "仅显示当前层"
+  },
+  "keymap": {
+    "encoder": "编码器"
   }
 }

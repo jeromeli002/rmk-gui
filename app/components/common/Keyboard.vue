@@ -7,6 +7,7 @@ const { keys, keySize = 64, highlight } = defineProps<{
 
 const emit = defineEmits<{
   (e: 'click', key: Key, zone: 'outer' | 'inner'): void
+  (e: 'dblclick', key: Key, zone: 'outer' | 'inner'): void
 }>()
 
 const keyPadding = computed(() => keySize * 0.065) // Magic Keyboard`s margin ratio
@@ -59,6 +60,7 @@ const kbdSize = computed(() => {
         transformOrigin: `calc(${(key.geometry.rotation_x - key.geometry.x) * keySize}px)` + `calc(${(key.geometry.rotation_y - key.geometry.y) * keySize}px)`,
       }"
       @click="(e) => emit('click', key, e)"
+      @dblclick="(e) => emit('dblclick', key, e)"
     />
   </div>
 </template>

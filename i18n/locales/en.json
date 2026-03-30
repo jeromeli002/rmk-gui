@@ -6,16 +6,44 @@
     "macros": "Macros",
     "combos": "Combos",
     "export": "Export",
-    "settings": "Settings",
-    "powerSaving": "Power Saving"
+    "settings": "Settings"
   },
   "settings": {
     "general": {
       "title": "General Settings",
-      "language": "Language",
+      "language": "Display Language",
       "mode": "Theme Mode",
       "primary": "Primary Color",
-      "surface": "Surface Color"
+      "surface": "Background Color",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "colors": {
+      "emerald": "Emerald",
+      "green": "Green",
+      "lime": "Lime",
+      "orange": "Orange",
+      "amber": "Amber",
+      "yellow": "Yellow",
+      "teal": "Teal",
+      "cyan": "Cyan",
+      "sky": "Sky",
+      "blue": "Blue",
+      "indigo": "Indigo",
+      "violet": "Violet",
+      "purple": "Purple",
+      "fuchsia": "Fuchsia",
+      "pink": "Pink",
+      "rose": "Rose",
+      "slate": "Slate",
+      "gray": "Gray",
+      "zinc": "Zinc",
+      "neutral": "Neutral",
+      "stone": "Stone",
+      "soho": "Soho",
+      "viva": "Viva",
+      "ocean": "Ocean"
     }
   },
   "mapper": {
@@ -23,6 +51,7 @@
     "layer": "Layer",
     "macros": "Macros",
     "quantum": "Quantum",
+    "joystick": "Joystick",
     "backlight": "Backlight",
     "appMediaMouse": "App Media and Mouse",
     "tapDance": "Tap Dance",
@@ -32,22 +61,16 @@
     "save": "Save Macros"
   },
   "combos": {
-    "add": "Add Combo",
-    "outputKey": "output key"
+    "title": "Combos",
+    "entry": "Combo Entry",
+    "key": "Key",
+    "inputKeys": "Input Keys",
+    "outputKey": "Output Key",
+    "notConnected": "Keyboard not connected",
+    "notAvailable": "Combos unavailable - disabled in firmware",
+    "instruction": "Select an input key or output key above, then click a candidate key below to assign."
   },
-  "powerSaving": {
-    "title": "Power Saving",
-    "enableSleep": "Enable Sleep Mode",
-    "sleepTimeout": "Sleep Timeout",
-    "sleepTimeoutDesc": "Idle time before keyboard enters sleep mode",
-    "backlightTimeout": "Backlight Timeout",
-    "backlightTimeoutDesc": "Time before keyboard backlight turns off automatically",
-    "lowPowerMode": "Low Power Mode",
-    "lowPowerModeDesc": "Reduce keyboard power consumption when enabled",
-    "minutes": "minutes",
-    "seconds": "seconds",
-    "never": "Never"
-  },
+
   "dialog": {
     "selectKey": "Select Key",
     "editKeycode": "Edit Keycode",
@@ -108,5 +131,16 @@
   },
   "keymap": {
     "encoder": "Encoder"
+  },
+  "tapDance": {
+    "title": "Tap Dance",
+    "entry": "Tap Dance Entry",
+    "onTap": "On tap",
+    "onHold": "On hold",
+    "onDoubleTap": "On double tap",
+    "onTapHold": "On tap + hold",
+    "tappingTerm": "Tapping term (ms)",
+    "usage": "Use TD(",
+    "notAvailable": "Tap Dance entries: unsupported - disabled in firmware"
   }
 }

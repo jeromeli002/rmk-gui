@@ -1,3 +1,41 @@
+import {
+  CMD_VIA_GET_PROTOCOL_VERSION,
+  CMD_VIA_GET_KEYBOARD_VALUE,
+  CMD_VIA_SET_KEYBOARD_VALUE,
+  CMD_VIA_GET_KEYCODE,
+  CMD_VIA_SET_KEYCODE,
+  CMD_VIA_LIGHTING_SET_VALUE,
+  CMD_VIA_LIGHTING_GET_VALUE,
+  CMD_VIA_LIGHTING_SAVE,
+  CMD_VIA_MACRO_GET_COUNT,
+  CMD_VIA_MACRO_GET_BUFFER_SIZE,
+  CMD_VIA_MACRO_GET_BUFFER,
+  CMD_VIA_MACRO_SET_BUFFER,
+  CMD_VIA_GET_LAYER_COUNT,
+  CMD_VIA_KEYMAP_GET_BUFFER,
+  CMD_VIA_VIAL_PREFIX,
+  CMD_VIAL_GET_KEYBOARD_ID,
+  CMD_VIAL_GET_SIZE,
+  CMD_VIAL_GET_DEFINITION,
+  CMD_VIAL_GET_ENCODER,
+  CMD_VIAL_SET_ENCODER,
+  CMD_VIAL_GET_UNLOCK_STATUS,
+  CMD_VIAL_UNLOCK_START,
+  CMD_VIAL_UNLOCK_POLL,
+  CMD_VIAL_LOCK,
+  CMD_VIAL_QMK_SETTINGS_QUERY,
+  CMD_VIAL_QMK_SETTINGS_GET,
+  CMD_VIAL_QMK_SETTINGS_SET,
+  CMD_VIAL_QMK_SETTINGS_RESET,
+  CMD_VIAL_DYNAMIC_ENTRY_OP,
+  DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES,
+  DYNAMIC_VIAL_TAP_DANCE_GET,
+  DYNAMIC_VIAL_TAP_DANCE_SET,
+  DYNAMIC_VIAL_COMBO_GET,
+  DYNAMIC_VIAL_COMBO_SET,
+  VialConstants
+} from '../types/constants'
+
 export class VialDevice implements VialInterface {
   constructor(private device: HIDInterface) {}
 
@@ -25,7 +63,7 @@ export class VialDevice implements VialInterface {
     const chunk: number[] = []
     const blockNum = Math.ceil(size / VialConstants.BUFFER_CHUNK_SIZE)
     for (let block = 0; block < blockNum; block++) {
-      const data = await this.device.writeRead([VialConstants.Command.VialPrefix, cmd, block])
+      const data = await this.device.writeRead([CMD_VIA_VIAL_PREFIX, cmd, block])
       chunk.push(...data)
     }
     return chunk.slice(0, size)
@@ -251,18 +289,18 @@ export class VialDevice implements VialInterface {
   }
 
   async layerCount(): Promise<number> {
-    const data = await this.device.writeRead([VialConstants.Command.GetLayerCount])
+    const data = await this.device.writeRead([CMD_VIA_GET_LAYER_COUNT])
     return data[1]!
   }
 
   async marcoCount(): Promise<number> {
-    const data = await this.device.writeRead([VialConstants.Command.GetMacroCount])
+    const data = await this.device.writeRead([CMD_VIA_MACRO_GET_COUNT])
     return data[1]!
   }
 
   async keymap(layerCount: number, rowCount: number, colCount: number): Promise<IndexMap> {
     const size = layerCount * rowCount * colCount * 2
-    const rawData = await this.readOffset(VialConstants.Command.GetKeymapBuffer, size, 0)
+    const rawData = await this.readOffset(CMD_VIA_KEYMAP_GET_BUFFER, size, 0)
 
     const keymapResult = new StringMap<[number, number, number], number>()
 
@@ -286,9 +324,9 @@ export class VialDevice implements VialInterface {
   }
 
   async vialJson(): Promise<VialJson> {
-    const sizeData = await this.device.writeRead([VialConstants.Command.VialPrefix, VialConstants.Command.GetSize])
+    const sizeData = await this.device.writeRead([CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_SIZE])
     const size = this.readUint32LE(sizeData)
-    const data = await this.readChunk(VialConstants.Command.GetDefinition, size)
+    const data = await this.readChunk(CMD_VIAL_GET_DEFINITION, size)
     const rawText = await this.decompressToString(data)
     return JSON.parse(rawText) as VialJson
   }
@@ -324,7 +362,7 @@ export class VialDevice implements VialInterface {
   }
 
   async macros(macroCount: number): Promise<Array<Array<MacroAction>>> {
-    const sizeData = await this.device.writeRead([VialConstants.Command.GetMacroBufferSize])
+    const sizeData = await this.device.writeRead([CMD_VIA_MACRO_GET_BUFFER_SIZE])
     const macroSize = this.readU16(sizeData, 1)
 
     const macroMemory: number[] = []
@@ -333,7 +371,7 @@ export class VialDevice implements VialInterface {
       const readSize = Math.min(VialConstants.BUFFER_CHUNK_SIZE, macroSize - i * VialConstants.BUFFER_CHUNK_SIZE)
 
       const msg = new Uint8Array(32)
-      msg[0] = VialConstants.Command.GetMacroBuffer
+      msg[0] = CMD_VIA_MACRO_GET_BUFFER
       msg[1] = (i * VialConstants.BUFFER_CHUNK_SIZE) >> 8
       msg[2] = (i * VialConstants.BUFFER_CHUNK_SIZE) & 0xFF
       msg[3] = readSize
@@ -363,7 +401,7 @@ export class VialDevice implements VialInterface {
     for (let i = 0; i < Math.ceil(macroSize / VialConstants.BUFFER_CHUNK_SIZE); i++) {
       const writeSize = Math.min(VialConstants.BUFFER_CHUNK_SIZE, macroSize - i * VialConstants.BUFFER_CHUNK_SIZE)
       const msg = new Uint8Array(32)
-      msg[0] = VialConstants.Command.SetMacroBuffer
+      msg[0] = CMD_VIA_MACRO_SET_BUFFER
       msg[1] = (i * VialConstants.BUFFER_CHUNK_SIZE) >> 8
       msg[2] = (i * VialConstants.BUFFER_CHUNK_SIZE) & 0xFF
       msg[3] = writeSize
@@ -375,19 +413,97 @@ export class VialDevice implements VialInterface {
   }
 
   async setKeycode(lyrRowCol: [number, number, number], keycode: number): Promise<void> {
-    const msg = [VialConstants.Command.SetKeycode, ...lyrRowCol, (keycode >> 8) & 0xFF, keycode & 0xFF]
+    const msg = [CMD_VIA_SET_KEYCODE, ...lyrRowCol, (keycode >> 8) & 0xFF, keycode & 0xFF]
     await this.device.writeRead(msg)
   }
 
   async encoderKeycode(layer: number, encoderIdx: number, direction: 'ccw' | 'cw'): Promise<number> {
     const dir = direction === 'cw' ? 1 : 0
-    const data = await this.device.writeRead([VialConstants.Command.VialPrefix, VialConstants.Command.GetEncoder, layer, encoderIdx, dir])
+    const data = await this.device.writeRead([CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_ENCODER, layer, encoderIdx, dir])
     return (data[0]! << 8) | data[1]!
   }
 
   async setEncoderKeycode(layer: number, encoderIdx: number, direction: 'ccw' | 'cw', keycode: number): Promise<void> {
     const dir = direction === 'cw' ? 1 : 0
-    const msg = [VialConstants.Command.VialPrefix, VialConstants.Command.SetEncoder, layer, encoderIdx, dir, (keycode >> 8) & 0xFF, keycode & 0xFF]
+    const msg = [CMD_VIA_VIAL_PREFIX, CMD_VIAL_SET_ENCODER, layer, encoderIdx, dir, (keycode >> 8) & 0xFF, keycode & 0xFF]
+    await this.device.writeRead(msg)
+  }
+
+  async getTapDanceCount(): Promise<number> {
+    const data = await this.device.writeRead([CMD_VIA_VIAL_PREFIX, CMD_VIAL_DYNAMIC_ENTRY_OP, DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES])
+    return data[0]!
+  }
+
+  async getTapDanceEntry(idx: number): Promise<[number, number, number, number, number]> {
+    const data = await this.device.writeRead([CMD_VIA_VIAL_PREFIX, CMD_VIAL_DYNAMIC_ENTRY_OP, DYNAMIC_VIAL_TAP_DANCE_GET, idx])
+    if (data[0] !== 0) {
+      throw new Error(`Failed to get tap dance entry ${idx}`)
+    }
+    return [
+      data[1]! | (data[2]! << 8),
+      data[3]! | (data[4]! << 8),
+      data[5]! | (data[6]! << 8),
+      data[7]! | (data[8]! << 8),
+      data[9]! | (data[10]! << 8),
+    ]
+  }
+
+  async setTapDanceEntry(idx: number, entry: [number, number, number, number, number]): Promise<void> {
+    const msg = [
+      CMD_VIA_VIAL_PREFIX,
+      CMD_VIAL_DYNAMIC_ENTRY_OP,
+      DYNAMIC_VIAL_TAP_DANCE_SET,
+      idx,
+      entry[0] & 0xFF,
+      (entry[0] >> 8) & 0xFF,
+      entry[1] & 0xFF,
+      (entry[1] >> 8) & 0xFF,
+      entry[2] & 0xFF,
+      (entry[2] >> 8) & 0xFF,
+      entry[3] & 0xFF,
+      (entry[3] >> 8) & 0xFF,
+      entry[4] & 0xFF,
+      (entry[4] >> 8) & 0xFF,
+    ]
+    await this.device.writeRead(msg)
+  }
+
+  async getComboCount(): Promise<number> {
+    const data = await this.device.writeRead([CMD_VIA_VIAL_PREFIX, CMD_VIAL_DYNAMIC_ENTRY_OP, DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES])
+    return data[1]!
+  }
+
+  async getComboEntry(idx: number): Promise<[number, number, number, number, number]> {
+    const data = await this.device.writeRead([CMD_VIA_VIAL_PREFIX, CMD_VIAL_DYNAMIC_ENTRY_OP, DYNAMIC_VIAL_COMBO_GET, idx])
+    if (data[0] !== 0) {
+      throw new Error(`Failed to get combo entry ${idx}`)
+    }
+    return [
+      data[1]! | (data[2]! << 8),
+      data[3]! | (data[4]! << 8),
+      data[5]! | (data[6]! << 8),
+      data[7]! | (data[8]! << 8),
+      data[9]! | (data[10]! << 8),
+    ]
+  }
+
+  async setComboEntry(idx: number, entry: [number, number, number, number, number]): Promise<void> {
+    const msg = [
+      CMD_VIA_VIAL_PREFIX,
+      CMD_VIAL_DYNAMIC_ENTRY_OP,
+      DYNAMIC_VIAL_COMBO_SET,
+      idx,
+      entry[0] & 0xFF,
+      (entry[0] >> 8) & 0xFF,
+      entry[1] & 0xFF,
+      (entry[1] >> 8) & 0xFF,
+      entry[2] & 0xFF,
+      (entry[2] >> 8) & 0xFF,
+      entry[3] & 0xFF,
+      (entry[3] >> 8) & 0xFF,
+      entry[4] & 0xFF,
+      (entry[4] >> 8) & 0xFF,
+    ]
     await this.device.writeRead(msg)
   }
 }

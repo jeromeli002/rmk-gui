@@ -285,6 +285,72 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     keyMacros.value = await vialDevice.value.macros(macroCount.value)
   };
 
+  const tapDanceCount = ref<number | null>(null)
+  const tapDanceEntries = ref<Array<[number, number, number, number, number]> | null>(null)
+  async function fetchTapDanceCount() {
+    if (!vialDevice.value) {
+      throw new Error('Vial device not available')
+    }
+    tapDanceCount.value = await vialDevice.value.getTapDanceCount()
+  }
+
+  async function fetchTapDanceEntries() {
+    if (!vialDevice.value) {
+      throw new Error('Vial device not available')
+    }
+    if (!tapDanceCount.value) {
+      throw new Error('Tap dance count not available')
+    }
+    const entries = []
+    for (let i = 0; i < tapDanceCount.value; i++) {
+      entries.push(await vialDevice.value.getTapDanceEntry(i))
+    }
+    tapDanceEntries.value = entries
+  }
+
+  async function setTapDanceEntry(idx: number, entry: [number, number, number, number, number]) {
+    if (!vialDevice.value) {
+      throw new Error('Vial device not available')
+    }
+    await vialDevice.value.setTapDanceEntry(idx, entry)
+    if (tapDanceEntries.value) {
+      tapDanceEntries.value[idx] = entry
+    }
+  }
+
+  const comboCount = ref<number | null>(null)
+  const comboEntries = ref<Array<[number, number, number, number, number]> | null>(null)
+  async function fetchComboCount() {
+    if (!vialDevice.value) {
+      throw new Error('Vial device not available')
+    }
+    comboCount.value = await vialDevice.value.getComboCount()
+  }
+
+  async function fetchComboEntries() {
+    if (!vialDevice.value) {
+      throw new Error('Vial device not available')
+    }
+    if (!comboCount.value) {
+      throw new Error('Combo count not available')
+    }
+    const entries = []
+    for (let i = 0; i < comboCount.value; i++) {
+      entries.push(await vialDevice.value.getComboEntry(i))
+    }
+    comboEntries.value = entries
+  }
+
+  async function setComboEntry(idx: number, entry: [number, number, number, number, number]) {
+    if (!vialDevice.value) {
+      throw new Error('Vial device not available')
+    }
+    await vialDevice.value.setComboEntry(idx, entry)
+    if (comboEntries.value) {
+      comboEntries.value[idx] = entry
+    }
+  }
+
   async function setKeycode(lyrRowCol: [number, number, number], keycode: number) {
     if (!vialDevice.value) {
       throw new Error('Vial device not available')
@@ -315,18 +381,26 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     await fetchProductName()
     await fetchLayerCount()
     await fetchMacroCount()
+    await fetchTapDanceCount()
+    await fetchComboCount()
     await fetchVialJson()
     fetchKleDefinition()
     await fetchKeymap()
     fetchLayoutKeymap()
     await fetchEncoderMap()
     await fetchMacros()
+    await fetchTapDanceEntries()
+    await fetchComboEntries()
   }
 
   function cleanAll() {
     productName.value = null
     layerCount.value = null
     macroCount.value = null
+    tapDanceCount.value = null
+    tapDanceEntries.value = null
+    comboCount.value = null
+    comboEntries.value = null
     vialJson.value = null
     kleDefinition.value = null
     keymap.value = null
@@ -380,6 +454,16 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     fetchLayerCount,
     macroCount,
     fetchMacroCount,
+    tapDanceCount,
+    tapDanceEntries,
+    fetchTapDanceCount,
+    fetchTapDanceEntries,
+    setTapDanceEntry,
+    comboCount,
+    comboEntries,
+    fetchComboCount,
+    fetchComboEntries,
+    setComboEntry,
     vialJson,
     fetchVialJson,
     kleDefinition,
@@ -390,6 +474,7 @@ export const useKeyboardStore = defineStore('keyboard', () => {
     fetchKeyList,
     fetchEncoderMap,
     fetchEncoderList,
+    encoderKeymap,
     keyMacros,
     fetchAll,
     cleanAll,

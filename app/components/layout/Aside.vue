@@ -6,9 +6,9 @@ const pages = computed(() => [
   { name: $t('aside.home'), icon: 'tabler:home-filled', to: '/' },
   { name: $t('aside.keymap'), icon: 'tabler:keyboard-filled', to: '/keymap', disabled: !keyboardStore.layoutKeymap },
   { name: $t('aside.macros'), icon: 'tabler:circle-letter-a-filled', to: '/macros', disabled: !keyboardStore.keyMacros },
+  { name: $t('tapDance.title'), icon: 'tabler:key-filled', to: '/tap-dance', disabled: !keyboardStore.tapDanceEntries },
   { name: $t('aside.combos'), icon: 'tabler:circle-letter-k-filled', to: '/combos', disabled: !keyboardStore.isConnected },
   { name: $t('aside.export'), icon: 'tabler:file-export', to: '/export', disabled: !keyboardStore.isConnected },
-  { name: $t('aside.powerSaving'), icon: 'tabler:leaf', to: '/power-saving' },
   { name: $t('aside.settings'), icon: 'tabler:settings-filled', to: '/settings' },
 ])
 

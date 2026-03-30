@@ -8,8 +8,7 @@
     "macros": "宏",
     "combos": "组合键",
     "export": "导出",
-    "settings": "设置",
-    "powerSaving": "省电模式"
+    "settings": "设置"
   },
   "settings": {
     "general": {
@@ -17,7 +16,36 @@
       "language": "显示语言",
       "mode": "主题模式",
       "primary": "强调色",
-      "surface": "背景色"
+      "surface": "背景色",
+      "light": "浅色",
+      "dark": "深色",
+      "system": "系统"
+    },
+    "colors": {
+      "emerald": "翡翠绿",
+      "green": "绿色",
+      "lime": "酸橙绿",
+      "orange": "橙色",
+      "amber": "琥珀色",
+      "yellow": "黄色",
+      "teal": "青色",
+      "cyan": "蓝绿色",
+      "sky": "天空蓝",
+      "blue": "蓝色",
+      "indigo": "靛蓝色",
+      "violet": "紫色",
+      "purple": "紫红色",
+      "fuchsia": "品红色",
+      "pink": "粉色",
+      "rose": "玫瑰红",
+      "slate": "石板灰",
+      "gray": "灰色",
+      "zinc": "锌灰",
+      "neutral": "中性灰",
+      "stone": "石头灰",
+      "soho": "苏荷灰",
+      "viva": "维瓦灰",
+      "ocean": "海洋灰"
     }
   },
   "mapper": {
@@ -25,6 +53,7 @@
     "layer": "层",
     "macros": "宏",
     "quantum": "量子",
+    "joystick": "摇杆",
     "backlight": "背光",
     "appMediaMouse": "应用/媒体/鼠标",
     "tapDance": "连击",
@@ -34,22 +63,17 @@
     "save": "保存宏"
   },
   "combos": {
-    "add": "新增组合",
-    "outputKey": "输出键"
+    "title": "组合键",
+    "entry": "组合键条目",
+    "key": "键值",
+    "inputKeys": "输入键",
+    "outputKey": "输出键值",
+    "notConnected": "未连接键盘",
+    "notAvailable": "组合键不可用 - 固件中已禁用",
+    "loading": "加载中...",
+    "instruction": "选择上方的一个输入键或输出键，然后点击下方候选键进行赋值。"
   },
-  "powerSaving": {
-    "title": "省电设置",
-    "enableSleep": "启用睡眠模式",
-    "sleepTimeout": "睡眠超时时间",
-    "sleepTimeoutDesc": "键盘进入睡眠模式前的空闲时间",
-    "backlightTimeout": "背光超时时间",
-    "backlightTimeoutDesc": "键盘背光自动关闭前的时间",
-    "lowPowerMode": "低功耗模式",
-    "lowPowerModeDesc": "启用后降低键盘功耗",
-    "minutes": "分钟",
-    "seconds": "秒",
-    "never": "永不"
-  },
+
   "dialog": {
     "selectKey": "选择按键",
     "editKeycode": "编辑键码",
@@ -110,5 +134,16 @@
   },
   "keymap": {
     "encoder": "编码器"
+  },
+  "tapDance": {
+    "title": "连击",
+    "entry": "连击条目",
+    "onTap": "点击时",
+    "onHold": "按住时",
+    "onDoubleTap": "双击时",
+    "onTapHold": "点击+按住时",
+    "tappingTerm": "点击时间阈值 (ms)",
+    "usage": "使用 TD(",
+    "notAvailable": "连击条目：不支持 - 固件中已禁用"
   }
 }

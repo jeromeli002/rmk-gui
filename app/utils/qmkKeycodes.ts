@@ -200,43 +200,43 @@ export const COMBO_MODIFIER_KEYCODES: KeycodeEntry[] = [
   // Ctrl + Alt
   { code: 0x0500, name: 'LCA(kc)', desc: 'Left Ctrl + Alt' },
   { code: 0x1500, name: 'RCA(kc)', desc: 'Right Ctrl + Alt' },
-  
+
   // Ctrl + Shift
   { code: 0x0300, name: 'LCS(kc)', desc: 'Left Ctrl + Shift' },
   { code: 0x1300, name: 'RCS(kc)', desc: 'Right Ctrl + Shift' },
-  
+
   // Ctrl + GUI
   { code: 0x0900, name: 'LCG(kc)', desc: 'Left Ctrl + GUI' },
   { code: 0x1900, name: 'RCG(kc)', desc: 'Right Ctrl + GUI' },
-  
+
   // Alt + Shift
   { code: 0x0600, name: 'LSA(kc)', desc: 'Left Shift + Alt' },
   { code: 0x1600, name: 'RSA(kc)', desc: 'Right Shift + Alt' },
-  
+
   // Alt + GUI
   { code: 0x0C00, name: 'LAG(kc)', desc: 'Left Alt + GUI' },
   { code: 0x1C00, name: 'RAG(kc)', desc: 'Right Alt + GUI' },
-  
+
   // Shift + GUI
   { code: 0x0A00, name: 'LSG(kc)', desc: 'Left Shift + GUI' },
   { code: 0x1A00, name: 'RSG(kc)', desc: 'Right Shift + GUI' },
-  
+
   // Ctrl + Alt + Shift
   { code: 0x0700, name: 'LCAS(kc)', desc: 'Left Ctrl + Alt + Shift' },
   { code: 0x1700, name: 'RCAS(kc)', desc: 'Right Ctrl + Alt + Shift' },
-  
+
   // Ctrl + Alt + GUI
   { code: 0x0D00, name: 'LCAG(kc)', desc: 'Left Ctrl + Alt + GUI' },
   { code: 0x1D00, name: 'RCAG(kc)', desc: 'Right Ctrl + Alt + GUI' },
-  
+
   // Ctrl + Shift + GUI
   { code: 0x0B00, name: 'LCSG(kc)', desc: 'Left Ctrl + Shift + GUI' },
   { code: 0x1B00, name: 'RCSG(kc)', desc: 'Right Ctrl + Shift + GUI' },
-  
+
   // Alt + Shift + GUI
   { code: 0x0E00, name: 'LASG(kc)', desc: 'Left Alt + Shift + GUI' },
   { code: 0x1E00, name: 'RASG(kc)', desc: 'Right Alt + Shift + GUI' },
-  
+
   // Ctrl + Alt + Shift + GUI
   { code: 0x0F00, name: 'LCASG(kc)', desc: 'Left Ctrl + Alt + Shift + GUI' },
   { code: 0x1F00, name: 'RCASG(kc)', desc: 'Right Ctrl + Alt + Shift + GUI' },
@@ -251,13 +251,13 @@ export const MODTAP_KEYCODES: KeycodeEntry[] = [
   { code: 0x2200, name: 'LSFT_T(kc)', desc: 'Left Shift Tap' },
   { code: 0x2400, name: 'LALT_T(kc)', desc: 'Left Alt Tap' },
   { code: 0x2800, name: 'LGUI_T(kc)', desc: 'Left GUI Tap' },
-  
+
   // Right modifiers
   { code: 0x3100, name: 'RCTL_T(kc)', desc: 'Right Control Tap' },
   { code: 0x3200, name: 'RSFT_T(kc)', desc: 'Right Shift Tap' },
   { code: 0x3400, name: 'RALT_T(kc)', desc: 'Right Alt Tap' },
   { code: 0x3800, name: 'RGUI_T(kc)', desc: 'Right GUI Tap' },
-  
+
   // Combination modifiers - Left
   { code: 0x2500, name: 'LCA_T(kc)', desc: 'Left Ctrl + Alt Tap' },
   { code: 0x2300, name: 'LCS_T(kc)', desc: 'Left Ctrl + Shift Tap' },
@@ -270,7 +270,7 @@ export const MODTAP_KEYCODES: KeycodeEntry[] = [
   { code: 0x2B00, name: 'LCSG_T(kc)', desc: 'Left Ctrl + Shift + GUI Tap' },
   { code: 0x2E00, name: 'LASG_T(kc)', desc: 'Left Alt + Shift + GUI Tap' },
   { code: 0x2F00, name: 'LCASG_T(kc)', desc: 'Left Ctrl + Alt + Shift + GUI Tap' },
-  
+
   // Combination modifiers - Right
   { code: 0x3500, name: 'RCA_T(kc)', desc: 'Right Ctrl + Alt Tap' },
   { code: 0x3300, name: 'RCS_T(kc)', desc: 'Right Ctrl + Shift Tap' },
@@ -310,7 +310,7 @@ export const LAYER_KEYCODES: KeycodeEntry[] = [
   { code: 0x5400, name: 'MO(5)', desc: 'Momentary Layer 5' },
   { code: 0x5500, name: 'MO(6)', desc: 'Momentary Layer 6' },
   { code: 0x5600, name: 'MO(7)', desc: 'Momentary Layer 7' },
-  
+
   // Toggle layer
   { code: 0x5800, name: 'TG(1)', desc: 'Toggle Layer 1' },
   { code: 0x5900, name: 'TG(2)', desc: 'Toggle Layer 2' },
@@ -319,7 +319,7 @@ export const LAYER_KEYCODES: KeycodeEntry[] = [
   { code: 0x5C00, name: 'TG(5)', desc: 'Toggle Layer 5' },
   { code: 0x5D00, name: 'TG(6)', desc: 'Toggle Layer 6' },
   { code: 0x5E00, name: 'TG(7)', desc: 'Toggle Layer 7' },
-  
+
   // Default layer
   { code: 0x6000, name: 'DF(0)', desc: 'Default Layer 0' },
   { code: 0x6100, name: 'DF(1)', desc: 'Default Layer 1' },
@@ -348,7 +348,7 @@ export const MEDIA_KEYCODES: KeycodeEntry[] = [
   { code: 0x800D, name: 'KC_ACL0', desc: 'Accelerometer 0' },
   { code: 0x800E, name: 'KC_ACL1', desc: 'Accelerometer 1' },
   { code: 0x800F, name: 'KC_ACL2', desc: 'Accelerometer 2' },
-  
+
   // Consumer controls
   { code: 0x8100, name: 'KC_BRIU', desc: 'Brightness Up' },
   { code: 0x8101, name: 'KC_BRID', desc: 'Brightness Down' },
@@ -414,18 +414,22 @@ export function buildKeycodeName(baseCode: number, modifiers: {
   // 查找基础键码名称
   const baseKeycode = BASIC_KEYCODES.find(kc => kc.code === baseCode)
   const baseName = baseKeycode?.name || `KC_${baseCode.toString(16).toUpperCase()}`
-  
+
   // 构建修饰键前缀
   const modParts: string[] = []
-  if (modifiers.ctrl) modParts.push(isRight ? 'R' : 'L')
-  if (modifiers.alt) modParts.push('A')
-  if (modifiers.shift) modParts.push('S')
-  if (modifiers.gui) modParts.push('G')
-  
+  if (modifiers.ctrl)
+    modParts.push(isRight ? 'R' : 'L')
+  if (modifiers.alt)
+    modParts.push('A')
+  if (modifiers.shift)
+    modParts.push('S')
+  if (modifiers.gui)
+    modParts.push('G')
+
   if (modParts.length === 0) {
     return baseName
   }
-  
+
   // 组合修饰键名称
   const modPrefix = modParts.join('')
   return `${modPrefix}(${baseName})`

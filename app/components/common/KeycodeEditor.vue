@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ALL_KEYCODES, findKeycodeByName, findKeycodeByCode, getAllKeycodeNames, filterKeycodeNames, buildKeycodeName, BASIC_KEYCODES } from '~/utils/qmkKeycodes'
+import { BASIC_KEYCODES, buildKeycodeName, filterKeycodeNames, findKeycodeByCode, findKeycodeByName } from '~/utils/qmkKeycodes'
 
 const props = defineProps<{
   visible: boolean
@@ -16,8 +16,8 @@ const keyboardStore = useKeyboardStore()
 const keycodeInput = ref('')
 const hexInput = ref('')
 const keyNameInput = ref('')
-const isInitializing = ref(false)  // 初始化标志
-const skipModifiersWatch = ref(false)  // 跳过 modifiers watch 的标志
+const isInitializing = ref(false) // 初始化标志
+const skipModifiersWatch = ref(false) // 跳过 modifiers watch 的标志
 
 const modifiers = ref({
   ctrl: false,
@@ -38,7 +38,7 @@ const MODIFIER_RALT = 0x1400
 const MODIFIER_RGUI = 0x1800
 
 const currentKeycode = computed(() => {
-  let code = Number.parseInt(keycodeInput.value) || 0
+  const code = Number.parseInt(keycodeInput.value) || 0
   return code
 })
 
@@ -71,7 +71,7 @@ const parsedKeyDisplay = computed(() => {
   const code = currentKeycode.value
   const baseKeycode = code & 0x00FF
   const isRight = !!(code & 0x1000)
-  
+
   // 先尝试查找完整键码名称（针对预定义的键码如 LCTL_T、MO 等）
   const keycodeEntry = findKeycodeByCode(code)
   if (keycodeEntry) {
@@ -85,33 +85,37 @@ const parsedKeyDisplay = computed(() => {
       return {
         modifiers: [modPart],
         base: keyPart,
-        hasModifiers: true
+        hasModifiers: true,
       }
     }
     // 如果没有括号，直接返回（如 KC_A、MO(1) 等）
     return {
       modifiers: [],
       base: name,
-      hasModifiers: false
+      hasModifiers: false,
     }
   }
-  
+
   // 对于组合键码（如 LCTL(KC_C)），根据修饰键状态构建显示
   // 查找基础键码名称
   const baseKey = BASIC_KEYCODES.find(kc => kc.code === baseKeycode)
   const baseName = baseKey?.name || ''
-  
+
   // 构建修饰键显示
   const modList: string[] = []
-  if (modifiers.value.ctrl) modList.push(isRight ? 'RCTL' : 'LCTL')
-  if (modifiers.value.shift) modList.push(isRight ? 'RSFT' : 'LSFT')
-  if (modifiers.value.alt) modList.push(isRight ? 'RALT' : 'LALT')
-  if (modifiers.value.gui) modList.push(isRight ? 'RGUI' : 'LGUI')
-  
+  if (modifiers.value.ctrl)
+    modList.push(isRight ? 'RCTL' : 'LCTL')
+  if (modifiers.value.shift)
+    modList.push(isRight ? 'RSFT' : 'LSFT')
+  if (modifiers.value.alt)
+    modList.push(isRight ? 'RALT' : 'LALT')
+  if (modifiers.value.gui)
+    modList.push(isRight ? 'RGUI' : 'LGUI')
+
   return {
     modifiers: modList,
-    base: baseName,  // 保留 KC_前缀
-    hasModifiers: modList.length > 0
+    base: baseName, // 保留 KC_前缀
+    hasModifiers: modList.length > 0,
   }
 })
 
@@ -120,27 +124,31 @@ const fullKeyName = computed(() => {
   const code = currentKeycode.value
   const baseKeycode = code & 0x00FF
   const isRight = !!(code & 0x1000)
-  
+
   // 先尝试查找完整键码名称
   const keycodeEntry = findKeycodeByCode(code)
   if (keycodeEntry) {
     return keycodeEntry.name
   }
-  
+
   // 对于组合键码，构建如 LCTL(KC_C) 这样的格式
   const baseKey = BASIC_KEYCODES.find(kc => kc.code === baseKeycode)
   const baseName = baseKey?.name || ''
-  
+
   const modParts: string[] = []
-  if (modifiers.value.ctrl) modParts.push(isRight ? 'RCTL' : 'LCTL')
-  if (modifiers.value.shift) modParts.push(isRight ? 'RSFT' : 'LSFT')
-  if (modifiers.value.alt) modParts.push(isRight ? 'RALT' : 'LALT')
-  if (modifiers.value.gui) modParts.push(isRight ? 'RGUI' : 'LGUI')
-  
+  if (modifiers.value.ctrl)
+    modParts.push(isRight ? 'RCTL' : 'LCTL')
+  if (modifiers.value.shift)
+    modParts.push(isRight ? 'RSFT' : 'LSFT')
+  if (modifiers.value.alt)
+    modParts.push(isRight ? 'RALT' : 'LALT')
+  if (modifiers.value.gui)
+    modParts.push(isRight ? 'RGUI' : 'LGUI')
+
   if (modParts.length === 0) {
     return baseName
   }
-  
+
   // 组合成 LCTL(KC_C) 这样的格式
   const modPrefix = modParts.join('+')
   return `${modPrefix}(${baseName})`
@@ -154,7 +162,7 @@ const filteredKeyNames = computed(() => {
   const inputValue = keyNameInput.value
   if (!inputValue)
     return []
-  
+
   return filterKeycodeNames(inputValue)
 })
 
@@ -532,57 +540,63 @@ function codeToKeyName(code: number): string {
 
 watch(() => props.visible, (visible) => {
   if (visible && props.keyInfo) {
-    isInitializing.value = true  // 开始初始化
-    skipModifiersWatch.value = true  // 同时跳过 modifiers watch
-    
+    isInitializing.value = true // 开始初始化
+    skipModifiersWatch.value = true // 同时跳过 modifiers watch
+
     const code = props.keyInfo.info.code
-    
+
     // 第一步：设置所有基础状态
     keycodeInput.value = code.toString()
     hexInput.value = `0x${code.toString(16).toUpperCase().padStart(4, '0')}`
-    
+
     // 检查是否是右修饰键（第 12 位为 1 表示右修饰键）
     isRightModifier.value = !!(code & 0x1000)
-    
+
     // 提取修饰键状态 - 这是关键，确保正确读取所有修饰键
     modifiers.value.ctrl = !!(code & MODIFIER_CTRL)
     modifiers.value.shift = !!(code & MODIFIER_SHIFT)
     modifiers.value.alt = !!(code & MODIFIER_ALT)
     modifiers.value.gui = !!(code & MODIFIER_GUI)
-    
+
     // 第二步：查找并设置键码名称（使用完整格式如 LCTL(KC_C)）
     const keycodeEntry = findKeycodeByCode(code)
     if (keycodeEntry) {
       keyNameInput.value = keycodeEntry.name
-    } else {
+    }
+    else {
       // 如果不是预定义的键码，使用完整格式名称
       const baseKeycode = code & 0x00FF
       const baseKey = BASIC_KEYCODES.find(kc => kc.code === baseKeycode)
       const baseName = baseKey?.name || ''
-      
+
       // 构建完整格式名称
       const modParts: string[] = []
-      if (modifiers.value.ctrl) modParts.push(isRightModifier.value ? 'RCTL' : 'LCTL')
-      if (modifiers.value.shift) modParts.push(isRightModifier.value ? 'RSFT' : 'LSFT')
-      if (modifiers.value.alt) modParts.push(isRightModifier.value ? 'RALT' : 'LALT')
-      if (modifiers.value.gui) modParts.push(isRightModifier.value ? 'RGUI' : 'LGUI')
-      
+      if (modifiers.value.ctrl)
+        modParts.push(isRightModifier.value ? 'RCTL' : 'LCTL')
+      if (modifiers.value.shift)
+        modParts.push(isRightModifier.value ? 'RSFT' : 'LSFT')
+      if (modifiers.value.alt)
+        modParts.push(isRightModifier.value ? 'RALT' : 'LALT')
+      if (modifiers.value.gui)
+        modParts.push(isRightModifier.value ? 'RGUI' : 'LGUI')
+
       if (modParts.length === 0) {
         keyNameInput.value = baseName
-      } else {
+      }
+      else {
         const modPrefix = modParts.join('+')
         keyNameInput.value = `${modPrefix}(${baseName})`
       }
     }
-    
+
     console.log('KeycodeEditor initialized with:', {
       code,
       hex: `0x${code.toString(16).toUpperCase().padStart(4, '0')}`,
       keyName: keyNameInput.value,
       isRight: isRightModifier.value,
-      modifiers: { ...modifiers.value }
+      modifiers: { ...modifiers.value },
     })
-    
+
     // 第三步：延迟重置标志，确保所有状态都已同步
     setTimeout(() => {
       skipModifiersWatch.value = false
@@ -597,11 +611,11 @@ watch(keycodeInput, (val) => {
   if (isInitializing.value || skipModifiersWatch.value) {
     console.log('keycodeInput watch skipped:', {
       isInitializing: isInitializing.value,
-      skipModifiersWatch: skipModifiersWatch.value
+      skipModifiersWatch: skipModifiersWatch.value,
     })
     return
   }
-  
+
   const num = Number.parseInt(val) || 0
   hexInput.value = `0x${num.toString(16).toUpperCase().padStart(4, '0')}`
   const baseKeycode = num & 0x00FF
@@ -609,30 +623,31 @@ watch(keycodeInput, (val) => {
   const keycodeEntry = findKeycodeByCode(num)
   if (keycodeEntry) {
     keyNameInput.value = keycodeEntry.name
-  } else {
+  }
+  else {
     keyNameInput.value = BASIC_KEYCODES.find(kc => kc.code === baseKeycode)?.name || ''
   }
   // 检查是否是右修饰键（第 12 位为 1 表示右修饰键）
   isRightModifier.value = !!(num & 0x1000)
-  
+
   // 设置标志，防止触发 modifiers watch
   skipModifiersWatch.value = true
-  
+
   // 提取修饰键状态
   modifiers.value.ctrl = !!(num & MODIFIER_CTRL)
   modifiers.value.shift = !!(num & MODIFIER_SHIFT)
   modifiers.value.alt = !!(num & MODIFIER_ALT)
   modifiers.value.gui = !!(num & MODIFIER_GUI)
-  
+
   // 下一个 tick 再重置标志
   setTimeout(() => {
     skipModifiersWatch.value = false
   }, 0)
-  
+
   console.log('keycodeInput changed:', {
     num,
     keyName: keyNameInput.value,
-    modifiers: { ...modifiers.value }
+    modifiers: { ...modifiers.value },
   })
 })
 
@@ -641,11 +656,11 @@ watch(hexInput, (val) => {
   if (isInitializing.value || skipModifiersWatch.value) {
     console.log('hexInput watch skipped:', {
       isInitializing: isInitializing.value,
-      skipModifiersWatch: skipModifiersWatch.value
+      skipModifiersWatch: skipModifiersWatch.value,
     })
     return
   }
-  
+
   const hex = val.replace(/^0x/i, '')
   const num = Number.parseInt(hex, 16) || 0
   keycodeInput.value = num.toString()
@@ -654,21 +669,22 @@ watch(hexInput, (val) => {
   const keycodeEntry = findKeycodeByCode(num)
   if (keycodeEntry) {
     keyNameInput.value = keycodeEntry.name
-  } else {
+  }
+  else {
     keyNameInput.value = BASIC_KEYCODES.find(kc => kc.code === baseKeycode)?.name || ''
   }
   // 检查是否是右修饰键（第 12 位为 1 表示右修饰键）
   isRightModifier.value = !!(num & 0x1000)
-  
+
   // 设置标志，防止触发 modifiers watch
   skipModifiersWatch.value = true
-  
+
   // 提取修饰键状态
   modifiers.value.ctrl = !!(num & MODIFIER_CTRL)
   modifiers.value.shift = !!(num & MODIFIER_SHIFT)
   modifiers.value.alt = !!(num & MODIFIER_ALT)
   modifiers.value.gui = !!(num & MODIFIER_GUI)
-  
+
   // 下一个 tick 再重置标志
   setTimeout(() => {
     skipModifiersWatch.value = false
@@ -680,17 +696,17 @@ watch(keyNameInput, (val) => {
   if (isInitializing.value || skipModifiersWatch.value) {
     console.log('keyNameInput watch skipped:', {
       isInitializing: isInitializing.value,
-      skipModifiersWatch: skipModifiersWatch.value
+      skipModifiersWatch: skipModifiersWatch.value,
     })
     return
   }
-  
+
   if (!val) {
     keycodeInput.value = '0'
     hexInput.value = '0x0000'
     return
   }
-  
+
   // 尝试查找完整的键码名称
   const keycodeEntry = findKeycodeByName(val)
   if (keycodeEntry) {
@@ -703,7 +719,8 @@ watch(keyNameInput, (val) => {
     modifiers.value.shift = !!(code & MODIFIER_SHIFT)
     modifiers.value.alt = !!(code & MODIFIER_ALT)
     modifiers.value.gui = !!(code & MODIFIER_GUI)
-  } else {
+  }
+  else {
     // 如果不是预定义的键码，使用基础键码映射
     const baseCode = keyNameToCode(val)
     if (baseCode !== 0) {
@@ -711,7 +728,7 @@ watch(keyNameInput, (val) => {
       const currentModifiers = Number.parseInt(keycodeInput.value) || 0
       const isRight = !!(currentModifiers & 0x1000)
       let newCode = baseCode
-      
+
       // 添加当前的修饰键
       if (modifiers.value.ctrl)
         newCode |= isRight ? MODIFIER_RCTRL : MODIFIER_CTRL
@@ -721,7 +738,7 @@ watch(keyNameInput, (val) => {
         newCode |= isRight ? MODIFIER_RALT : MODIFIER_ALT
       if (modifiers.value.gui)
         newCode |= isRight ? MODIFIER_RGUI : MODIFIER_GUI
-      
+
       keycodeInput.value = newCode.toString()
       hexInput.value = `0x${newCode.toString(16).toUpperCase().padStart(4, '0')}`
     }
@@ -733,17 +750,17 @@ watch(modifiers, (newModifiers) => {
   if (isInitializing.value || skipModifiersWatch.value) {
     console.log('modifiers watch skipped:', {
       isInitializing: isInitializing.value,
-      skipModifiersWatch: skipModifiersWatch.value
+      skipModifiersWatch: skipModifiersWatch.value,
     })
     return
   }
-  
+
   console.log('modifiers watch triggered:', {
     oldModifiers: modifiers.value,
     newModifiers,
-    isRight: isRightModifier.value
+    isRight: isRightModifier.value,
   })
-  
+
   const baseCode = Number.parseInt(keycodeInput.value) || 0
   // 保存基础键码（清除修饰键）
   const baseKeycode = baseCode & 0x00FF
@@ -766,41 +783,48 @@ watch(modifiers, (newModifiers) => {
     const keycodeEntry = findKeycodeByCode(newCode)
     if (keycodeEntry) {
       keyNameInput.value = keycodeEntry.name
-    } else {
+    }
+    else {
       // 构建完整格式名称如 LCTL(KC_C)
       const baseKey = BASIC_KEYCODES.find(kc => kc.code === baseKeycode)
       const baseName = baseKey?.name || ''
-      
+
       const modParts: string[] = []
-      if (newModifiers.ctrl) modParts.push(isRightModifier.value ? 'RCTL' : 'LCTL')
-      if (newModifiers.shift) modParts.push(isRightModifier.value ? 'RSFT' : 'LSFT')
-      if (newModifiers.alt) modParts.push(isRightModifier.value ? 'RALT' : 'LALT')
-      if (newModifiers.gui) modParts.push(isRightModifier.value ? 'RGUI' : 'LGUI')
-      
+      if (newModifiers.ctrl)
+        modParts.push(isRightModifier.value ? 'RCTL' : 'LCTL')
+      if (newModifiers.shift)
+        modParts.push(isRightModifier.value ? 'RSFT' : 'LSFT')
+      if (newModifiers.alt)
+        modParts.push(isRightModifier.value ? 'RALT' : 'LALT')
+      if (newModifiers.gui)
+        modParts.push(isRightModifier.value ? 'RGUI' : 'LGUI')
+
       if (modParts.length === 0) {
         keyNameInput.value = baseName
-      } else {
+      }
+      else {
         const modPrefix = modParts.join('+')
         keyNameInput.value = `${modPrefix}(${baseName})`
       }
     }
   }
-  
+
   console.log('modifiers watch finished:', {
     newCode,
-    keycodeInput: keycodeInput.value
+    keycodeInput: keycodeInput.value,
   })
 }, { deep: true })
 
 watch(isRightModifier, (newVal) => {
   // 初始化期间不处理
-  if (isInitializing.value) return
-  
+  if (isInitializing.value)
+    return
+
   console.log('isRightModifier changed:', {
     oldVal: !newVal,
-    newVal
+    newVal,
   })
-  
+
   // 当左右修饰键切换时，更新修饰键状态
   const baseCode = Number.parseInt(keycodeInput.value) || 0
   // 保存基础键码
@@ -824,7 +848,8 @@ watch(isRightModifier, (newVal) => {
     const keycodeEntry = findKeycodeByCode(newCode)
     if (keycodeEntry) {
       keyNameInput.value = keycodeEntry.name
-    } else {
+    }
+    else {
       keyNameInput.value = buildKeycodeName(baseKeycode, modifiers.value, isRightModifier.value)
     }
   }
@@ -913,12 +938,12 @@ function toggleModifier(key: keyof typeof modifiers.value) {
               />
               <div
                 v-if="showSuggestions && filteredKeyNames.length > 0 && isInputFocused"
-                class="absolute left-0 right-0 top-full z-50 mt-1 max-h-48 overflow-y-auto rounded-md border border-surface-300 bg-white shadow-lg dark:border-surface-600 dark:bg-surface-800"
+                class="absolute inset-x-0 top-full z-50 mt-1 max-h-48 overflow-y-auto rounded-md border border-surface-300 bg-white shadow-lg dark:border-surface-600 dark:bg-surface-800"
               >
                 <div
                   v-for="name in filteredKeyNames"
                   :key="name"
-                  class="cursor-pointer px-3 py-1.5 text-sm font-mono text-surface-700 hover:bg-primary hover:text-white dark:text-surface-200"
+                  class="cursor-pointer px-3 py-1.5 font-mono text-sm text-surface-700 hover:bg-primary hover:text-white dark:text-surface-200"
                   @mousedown="selectSuggestion(name)"
                 >
                   {{ name }}
@@ -943,9 +968,9 @@ function toggleModifier(key: keyof typeof modifiers.value) {
               @click="isRightModifier = !isRightModifier"
             >
               <span
-                class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                class="inline-block size-4 rounded-full bg-white transition-transform"
                 :class="isRightModifier ? 'translate-x-5' : 'translate-x-1'"
-              ></span>
+              />
             </button>
             <span class="text-xs text-surface-500 dark:text-surface-400">{{ $t('dialog.right') }}</span>
           </div>
@@ -1026,7 +1051,7 @@ function toggleModifier(key: keyof typeof modifiers.value) {
         <!-- 按键显示区域 -->
         <div class="flex items-center justify-center">
           <div
-            class="relative flex h-20 w-20 flex-col items-center justify-center rounded-lg border-2 border-surface-400 bg-gradient-to-b from-surface-100 to-surface-200 p-1 shadow-md dark:border-surface-600 dark:from-surface-700 dark:to-surface-800"
+            class="relative flex size-20 flex-col items-center justify-center rounded-lg border-2 border-surface-400 bg-gradient-to-b from-surface-100 to-surface-200 p-1 shadow-md dark:border-surface-600 dark:from-surface-700 dark:to-surface-800"
           >
             <!-- 修饰键区域（上半部分） -->
             <div

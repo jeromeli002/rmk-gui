@@ -45,19 +45,88 @@ function handleSelectEncoder(binding: NonNullable<typeof currEncoder.value>) {
 }
 
 function selectNext() {
-  for (let col = currKey.value![0][1] + 1; col < keyboardStore.vialJson!.matrix.cols!; col++) {
-    if (keyboardStore.layoutKeymap!.has([currLayer.value, currKey.value![0][0], col])) {
-      currKey.value = [[currKey.value![0][0], col], 'outer']
-      return
+  // 创建所有控件的有序列表（按键和编码器）
+  const allControls = []
+  
+  // 添加按键
+  for (const key of keys.value) {
+    allControls.push({
+      type: 'key' as const,
+      value: key,
+      position: {
+        x: key.geometry.x,
+        y: key.geometry.y
+      }
+    })
+  }
+  
+  // 添加编码器
+  for (const encoder of encoders.value) {
+    if (encoder.ccw) {
+      allControls.push({
+        type: 'encoder' as const,
+        value: encoder.ccw,
+        position: {
+          x: encoder.ccw.geometry.x,
+          y: encoder.ccw.geometry.y
+        }
+      })
+    }
+    if (encoder.cw) {
+      allControls.push({
+        type: 'encoder' as const,
+        value: encoder.cw,
+        position: {
+          x: encoder.cw.geometry.x,
+          y: encoder.cw.geometry.y
+        }
+      })
     }
   }
-  for (let r = currKey.value![0][0] + 1; r < keyboardStore.vialJson!.matrix.rows! + currKey.value![0][0]; r++) {
-    const row = r % keyboardStore.vialJson!.matrix.rows!
-    for (let col = 0; col < keyboardStore.vialJson!.matrix.cols!; col++) {
-      if (keyboardStore.layoutKeymap!.has([currLayer.value, row, col])) {
-        currKey.value = [[row, col], 'outer']
-        return
-      }
+  
+  // 按位置排序（先按y坐标，再按x坐标）
+  allControls.sort((a, b) => {
+    if (a.position.y !== b.position.y) {
+      return a.position.y - b.position.y
+    }
+    return a.position.x - b.position.x
+  })
+  
+  // 找到当前选中的控件在列表中的索引
+  let currentIndex = -1
+  if (currKey.value) {
+    currentIndex = allControls.findIndex(control => 
+      control.type === 'key' && 
+      control.value.position.row === currKey.value[0][0] && 
+      control.value.position.col === currKey.value[0][1]
+    )
+  } else if (currEncoder.value) {
+    currentIndex = allControls.findIndex(control => 
+      control.type === 'encoder' && 
+      control.value.encoder === currEncoder.value?.encoder && 
+      control.value.direction === currEncoder.value?.direction
+    )
+  }
+  
+  // 选择下一个控件
+  if (currentIndex >= 0 && currentIndex < allControls.length - 1) {
+    const nextControl = allControls[currentIndex + 1]
+    if (nextControl.type === 'key') {
+      currKey.value = [[nextControl.value.position.row, nextControl.value.position.col], 'outer']
+      currEncoder.value = null
+    } else {
+      currEncoder.value = nextControl.value
+      currKey.value = null
+    }
+  } else if (allControls.length > 0) {
+    // 如果已经是最后一个控件，回到第一个
+    const firstControl = allControls[0]
+    if (firstControl.type === 'key') {
+      currKey.value = [[firstControl.value.position.row, firstControl.value.position.col], 'outer']
+      currEncoder.value = null
+    } else {
+      currEncoder.value = firstControl.value
+      currKey.value = null
     }
   }
 }
@@ -68,9 +137,14 @@ function handleSetKey(key: Key) {
   }
 
   if (currEncoder.value) {
-    keyboardStore.setEncoderKeycode(currLayer.value, currEncoder.value.encoder, currEncoder.value.direction, key.info.code)
+    // 立即更新本地状态以避免延迟
+    const directionValue = currEncoder.value.direction === 'cw' ? 1 : 0
+    keyboardStore.encoderKeymap!.set([currLayer.value, currEncoder.value.encoder, directionValue], key.info.code)
     currEncoder.value.info.code = key.info.code
     currEncoder.value.info.symbol = [...key.info.symbol]
+    // 异步写入设备
+    keyboardStore.setEncoderKeycode(currLayer.value, currEncoder.value.encoder, currEncoder.value.direction, key.info.code)
+    selectNext()
     return
   }
 

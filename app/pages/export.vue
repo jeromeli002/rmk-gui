@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 
@@ -7,82 +8,11 @@ const toast = useToast()
 const confirm = useConfirm()
 const { t } = useI18n()
 
-const matrix = ref('')
-const exportAllLayers = ref(true)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const pendingImportFile = ref<File | null>(null)
 
 function handleImportClick() {
   fileInputRef.value?.click()
-}
-
-const keys = computed(() => {
-  const ans = []
-  const layerCount = keyboardStore.layerCount || 0
-  
-  if (layerCount === 0) {
-    return ans
-  }
-  
-  // 从 kleDefinition 中读取矩阵坐标
-  if (!keyboardStore.kleDefinition) {
-    return ans
-  }
-  
-  // 提取所有按键的坐标
-  const matrixCoords = new Set<string>()
-  for (const k of keyboardStore.kleDefinition.keys) {
-    const isEncoder = k.labels.some((label: string | null) => label?.trim().toLowerCase() === 'e')
-    if (isEncoder) continue
-    
-    const pair = parseLabelPair(k.labels[0])
-    if (!pair) continue
-    
-    const [row, col] = pair
-    matrixCoords.add(`${row},${col}`)
-  }
-  
-  // 生成矩阵字符串
-  const matrixStr = Array.from(matrixCoords)
-    .map(coord => `(${coord})`)
-    .sort()
-    .join(' ')
-  
-  // 更新 matrix
-  if (matrixStr && !matrix.value) {
-    matrix.value = matrixStr
-  }
-  
-  // 生成各层的键码显示
-  for (let layer = 0; layer < layerCount; layer++) {
-    let keys = matrix.value
-    for (const [[row, col], origin] of parseCoordinateString(matrix.value)) {
-      // 使用 layoutKeymap 而不是 keymap
-      const keycode = keyboardStore.layoutKeymap?.get(`${layer},${row},${col}`)
-      if (keycode !== undefined) {
-        const key = keyToRmk(keycode)
-        keys = keys.replace(origin, key)
-      }
-    }
-    ans.push(keys)
-  }
-  return ans
-})
-
-function parseCoordinateString(input: string): [[number, number], string][] {
-  return Array.from(input.matchAll(/\(\s*(\d+)\s*,\s*(\d+)\s*\)/g)).map(match => [
-    [Number.parseInt(match[1]!, 10), Number.parseInt(match[2]!, 10)],
-    match[0],
-  ])
-}
-
-function parseLabelPair(label: string | null): [number, number] | null {
-  if (!label) return null
-  const parts = label.split(',').map(s => Number.parseInt(s.trim(), 10))
-  if (parts.length === 2 && !Number.isNaN(parts[0]) && !Number.isNaN(parts[1])) {
-    return [parts[0], parts[1]]
-  }
-  return null
 }
 
 // ========== Vial.json 导出功能 ==========
@@ -151,12 +81,33 @@ function generateKeymapData() {
     }
   }
   
+  // 收集编码器数据
+  const encoderData: Record<string, number> = {}
+  if (keyboardStore.encoderKeymap && keyboardStore.encoderKeymap.size > 0) {
+    for (const [key, value] of keyboardStore.encoderKeymap.entries()) {
+      const [layer, encoderIdx, direction] = key
+      encoderData[`${layer}_${encoderIdx}_${direction}`] = value
+    }
+  }
+  
+  // 收集宏数据
+  const macrosData = keyboardStore.keyMacros
+  
+  // 收集 Tap Dance 数据
+  const tapDanceData = keyboardStore.tapDanceEntries
+  
+  // 收集 Combo 数据
+  const comboData = keyboardStore.comboEntries
+  
   return {
-    version: '1.0',
+    version: '1.1',
     timestamp: new Date().toISOString(),
     layerCount: keyboardStore.layerCount,
-    matrix: matrix.value,
     keymap: keymapData,
+    encoder: encoderData,
+    macros: macrosData,
+    tapDance: tapDanceData,
+    combo: comboData,
     exportedLayers: Array.from({ length: layerCount }, (_, i) => i)
   }
 }
@@ -175,7 +126,7 @@ async function handleExportKeymap() {
     }
     
     const exportData = generateKeymapData()
-    const jsonString = JSON.stringify(exportData, null, 2)
+    const jsonString = JSON.stringify(exportData)
     const blob = new Blob([jsonString], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     
@@ -252,29 +203,89 @@ async function executeImport(file: File) {
       let errorCount = 0
       
       // 遍历所有导入的键码
-      for (const [key, value] of Object.entries(data.keymap)) {
-        const [layer, row, col] = key.split('_').map(Number)
-        
-        try {
-          // 更新 layoutKeymap（内存中的数据）
-          const mapKey = `${layer},${row},${col}`
-          keyboardStore.layoutKeymap.set(mapKey, value as number)
+      if (data.keymap) {
+        for (const [key, value] of Object.entries(data.keymap)) {
+          const [layer, row, col] = key.split('_').map(Number)
           
-          // 如果键盘已连接，写入硬件
-          if (keyboardStore.isConnected) {
-            await keyboardStore.setKeycode([layer, row, col], value as number)
-            successCount++
+          try {
+            // 更新 layoutKeymap（内存中的数据）
+            const mapKey = `${layer},${row},${col}`
+            keyboardStore.layoutKeymap.set(mapKey, value as number)
+            
+            // 如果键盘已连接，写入硬件
+            if (keyboardStore.isConnected) {
+              await keyboardStore.setKeycode([layer, row, col], value as number)
+              successCount++
+            }
+          } catch (err) {
+            console.error(`Failed to set keycode at [${layer},${row},${col}]:`, err)
+            errorCount++
           }
+        }
+      }
+      
+      // 导入编码器数据
+      if (data.encoder && keyboardStore.encoderKeymap && keyboardStore.isConnected) {
+        for (const [key, value] of Object.entries(data.encoder)) {
+          const [layer, encoderIdx, direction] = key.split('_').map(Number)
+          
+          try {
+            // 更新 encoderKeymap（内存中的数据）
+            keyboardStore.encoderKeymap.set([layer, encoderIdx, direction], value as number)
+            
+            // 写入硬件
+            await keyboardStore.setEncoderKeycode(layer, encoderIdx, direction === 1 ? 'cw' : 'ccw', value as number)
+            successCount++
+          } catch (err) {
+            console.error(`Failed to set encoder keycode at [${layer},${encoderIdx},${direction}]:`, err)
+            errorCount++
+          }
+        }
+      }
+      
+      // 导入宏数据
+      if (data.macros && keyboardStore.keyMacros && keyboardStore.macroCount && keyboardStore.isConnected) {
+        try {
+          keyboardStore.keyMacros = data.macros
+          await keyboardStore.saveMacros()
+          successCount++
         } catch (err) {
-          console.error(`Failed to set keycode at [${layer},${row},${col}]:`, err)
+          console.error('Failed to import macros:', err)
           errorCount++
+        }
+      }
+      
+      // 导入 Tap Dance 数据
+      if (data.tapDance && keyboardStore.tapDanceEntries && keyboardStore.tapDanceCount && keyboardStore.isConnected) {
+        for (let i = 0; i < data.tapDance.length; i++) {
+          try {
+            await keyboardStore.setTapDanceEntry(i, data.tapDance[i])
+            successCount++
+          } catch (err) {
+            console.error(`Failed to set tap dance entry ${i}:`, err)
+            errorCount++
+          }
+        }
+      }
+      
+      // 导入 Combo 数据
+      if (data.combo && keyboardStore.comboEntries && keyboardStore.comboCount && keyboardStore.isConnected) {
+        for (let i = 0; i < data.combo.length; i++) {
+          try {
+            await keyboardStore.setComboEntry(i, data.combo[i])
+            successCount++
+          } catch (err) {
+            console.error(`Failed to set combo entry ${i}:`, err)
+            errorCount++
+          }
         }
       }
       
       // 不自动更新矩阵配置，矩阵应该从键盘读取
       // 如果导入的文件包含 matrix 字段，可以选择性使用
-      if (data.matrix && !matrix.value) {
-        matrix.value = data.matrix
+      if (data.matrix) {
+        // Matrix data is available but not automatically applied
+        console.log('Matrix data found in import file:', data.matrix)
       }
       
       // 清空文件输入和临时变量
@@ -286,7 +297,7 @@ async function executeImport(file: File) {
       // 显示成功提示
       let summary = t('export.importSuccess')
       if (keyboardStore.isConnected) {
-        summary += ` (${successCount} keys)`
+        summary += ` (${successCount} items)`
         if (errorCount > 0) {
           summary += `, ${errorCount} failed`
         }
@@ -394,82 +405,7 @@ function isValidKeymapBackup(data: any): boolean {
       </div>
     </div>
     
-    <!-- 矩阵显示 -->
-    <div class="rounded-lg border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-700 dark:bg-surface-800">
-      <div class="mb-3">
-        <h3 class="text-base font-semibold text-surface-800 dark:text-surface-100">
-          {{ $t('export.matrix') }}
-        </h3>
-        <p class="mt-1 text-xs text-surface-600 dark:text-surface-400">
-          {{ $t('export.matrixDesc') }}
-        </p>
-      </div>
-      <Textarea
-        v-model="matrix"
-        auto-resize
-        :placeholder="`${$t('export.matrix')} (e.g., (0,0) (0,1) (1,0) (1,1))`"
-        class="w-full font-mono text-sm"
-        rows="3"
-      />
-    </div>
-    
-    <!-- 键位图层显示 -->
-    <div class="flex-1 overflow-hidden rounded-lg border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-700 dark:bg-surface-800">
-      <div class="mb-3 flex items-center justify-between">
-        <div>
-          <h3 class="text-base font-semibold text-surface-800 dark:text-surface-100">
-            {{ $t('export.keymap') }}
-          </h3>
-          <p class="mt-1 text-xs text-surface-600 dark:text-surface-400">
-            {{ $t('export.keymapDesc') }}
-          </p>
-        </div>
-        <div class="flex items-center gap-2">
-          <Checkbox
-            v-model="exportAllLayers"
-            :disabled="!keyboardStore.isConnected"
-            input-id="viewAllLayers"
-          />
-          <label for="viewAllLayers" class="text-sm text-surface-700 dark:text-surface-300">
-            {{ exportAllLayers ? $t('export.viewAllLayers') : $t('export.viewCurrentLayer') }}
-          </label>
-        </div>
-      </div>
-      <ScrollPanel class="h-[calc(100%-4rem)]">
-        <div class="space-y-4">
-          <div
-            v-for="(k, index) in keys"
-            :key="index"
-            class="rounded border border-surface-200 bg-surface-50 p-3 dark:border-surface-600 dark:bg-surface-900"
-          >
-            <div class="mb-2 flex items-center justify-between">
-              <div class="text-xs font-medium text-surface-600 dark:text-surface-400">
-                {{ $t('export.layer') }} {{ exportAllLayers ? index : currentLayer }}
-              </div>
-              <Badge
-                v-if="!exportAllLayers"
-                :value="`${$t('export.currentLayer')}`"
-                severity="info"
-              />
-            </div>
-            <Textarea
-              :value="k"
-              auto-resize
-              class="w-full font-mono text-sm"
-              rows="2"
-              readonly
-            />
-          </div>
-          <div
-            v-if="keys.length === 0"
-            class="flex items-center justify-center py-8 text-surface-500 dark:text-surface-400"
-          >
-            <Icon name="tabler:keyboard-off" class="mr-2 text-xl" />
-            <span>{{ $t('header.waitingForKeyboard') }}</span>
-          </div>
-        </div>
-      </ScrollPanel>
-    </div>
+
   </div>
   
   <ConfirmDialog />

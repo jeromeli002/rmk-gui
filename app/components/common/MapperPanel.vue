@@ -11,6 +11,7 @@ const keyTabs = computed(() => [
   { value: 'layer', title: t('mapper.layer') },
   { value: 'macros', title: t('mapper.macros') },
   { value: 'quantum', title: t('mapper.quantum') },
+  { value: 'joystick', title: t('mapper.joystick') },
   { value: 'backlight', title: t('mapper.backlight') },
   { value: 'app-media-mouse', title: t('mapper.appMediaMouse') },
   { value: 'tap-dance', title: t('mapper.tapDance') },
@@ -41,7 +42,7 @@ const layerKeyCode = [
 function codeToKey(keycode: number): Key {
   const customKeycodes = keyboardStore.vialJson?.customKeycodes || []
   let symbol = [...keyToLable(keycode)]
-  
+
   // 检查是否是user键
   if (keycode >= 0x0840 && keycode <= 0x085F) {
     const index = keycode - 0x0840
@@ -50,7 +51,7 @@ function codeToKey(keycode: number): Key {
       symbol = [null, customKeycodes[index].shortName]
     }
   }
-  
+
   return {
     geometry: {
       x: 0,
@@ -109,16 +110,21 @@ const macroKeyCodes = computed(() => Array.from({ length: keyboardStore.macroCou
 const macroControlCodes = [0x0753, 0x0754, 0x0755, 0x0756, 0x0757]
 const macroRows = computed(() => rowsFromCodes(macroKeyCodes.value))
 const quantumRows = computed(() => rowsFromCodes([
-  ...codesInRange(0x0400, 0x04FF),
+  ...codesInRange(0x0420, 0x04FF),
   ...codesInRange(0x0700, 0x07FF),
   ...codesInRange(0x0800, 0x083F),
 ]))
+
+const joystickRows = computed(() => rowsFromCodes(codesInRange(0x0400, 0x041F)))
 const backlightRows = computed(() => rowsFromCodes(codesInRange(0x0600, 0x0606)))
 const appMediaMouseRows = computed(() => rowsFromCodes([
   ...codesInRange(0x0065, 0x0065),
   ...codesInRange(0x00A8, 0x00DF),
 ]))
-const tapDanceRows = computed(() => rowsFromCodes(codesInRange(0x5700, 0x571F)))
+const tapDanceRows = computed(() => {
+  const count = keyboardStore.tapDanceCount || 0
+  return Array.from({ length: count }, (_, i) => 0x5700 + i)
+})
 const userRows = computed(() => {
   const customKeycodes = keyboardStore.vialJson?.customKeycodes || []
   if (customKeycodes.length > 0) {
@@ -141,8 +147,15 @@ const userRows = computed(() => {
           <Keyboard :keys="baseKeys" style="zoom: 0.75;" @click="(key, _zone) => emit('setKey', key)" />
         </TabPanel>
         <TabPanel value="layer">
-          <div v-for="(key, index) in layerKeyCode" :key="index" class="mb-2 flex gap-2">
-            <Key v-for="code in key.value" :key="code" :key-info="codeToKey(code)" @click="(_zone) => emit('setKey', codeToKey(code))" />
+          <div class="mb-2 flex flex-wrap gap-2">
+            <template v-for="group in layerKeyCode" :key="group.title">
+              <Key v-for="code in group.value" :key="code" :key-info="codeToKey(code)" @click="(_zone) => emit('setKey', codeToKey(code))" />
+            </template>
+          </div>
+        </TabPanel>
+        <TabPanel value="joystick">
+          <div class="mb-2 flex flex-wrap gap-2">
+            <Key v-for="code in joystickRows" :key="code" :key-info="codeToKey(code)" @click="(_zone) => emit('setKey', codeToKey(code))" />
           </div>
         </TabPanel>
         <TabPanel value="macros">

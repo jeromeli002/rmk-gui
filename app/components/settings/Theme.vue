@@ -1,8 +1,9 @@
 <script lang="ts" setup>
 import { computed } from 'vue'
+import { primaryColors, surfaceColors } from '../../types/constants'
+
 const themeStore = useSettingStore()
 const { locales, t } = useI18n()
-import { primaryColors, surfaceColors } from '../../types/constants'
 
 const themeModeOptions = [
   { icon: 'tabler:sun', label: t('settings.general.light'), value: 'light' },
@@ -14,14 +15,14 @@ const themeModeOptions = [
 const i18nPrimaryColors = computed(() => {
   return primaryColors.map(color => ({
     ...color,
-    label: t(`settings.colors.${color.name}`) || color.name
+    label: t(`settings.colors.${color.name}`) || color.name,
   }))
 })
 
 const i18nSurfaceColors = computed(() => {
   return surfaceColors.map(color => ({
     ...color,
-    label: t(`settings.colors.${color.name}`) || color.name
+    label: t(`settings.colors.${color.name}`) || color.name,
   }))
 })
 </script>

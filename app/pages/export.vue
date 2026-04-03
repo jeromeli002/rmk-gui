@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import { ref } from 'vue'
-import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
+import { useToast } from 'primevue/usetoast'
+import { ref } from 'vue'
 
 const keyboardStore = useKeyboardStore()
 const toast = useToast()
@@ -21,20 +21,20 @@ async function handleExportVialJson() {
     toast.add({
       severity: 'warn',
       summary: t('header.waitingForKeyboard'),
-      life: 3000
+      life: 3000,
     })
     return
   }
-  
+
   try {
     if (!keyboardStore.vialJson) {
       throw new Error('Vial JSON not available')
     }
-    
+
     const jsonString = JSON.stringify(keyboardStore.vialJson, null, 2)
     const blob = new Blob([jsonString], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
-    
+
     const link = document.createElement('a')
     link.href = url
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
@@ -44,19 +44,20 @@ async function handleExportVialJson() {
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
-    
+
     toast.add({
       severity: 'success',
       summary: t('export.exportSuccess'),
-      life: 3000
+      life: 3000,
     })
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Export Vial.json failed:', error)
     toast.add({
       severity: 'error',
       summary: t('export.importFailed'),
       detail: 'Failed to export Vial.json',
-      life: 3000
+      life: 3000,
     })
   }
 }
@@ -67,10 +68,10 @@ function generateKeymapData() {
   if (!keyboardStore.layoutKeymap || !keyboardStore.layerCount) {
     throw new Error('Keymap data not loaded')
   }
-  
+
   const layerCount = keyboardStore.layerCount
   const keymapData: Record<string, number> = {}
-  
+
   // 遍历所有层和所有键位
   for (let layer = 0; layer < layerCount; layer++) {
     for (const [key, value] of keyboardStore.layoutKeymap.entries()) {
@@ -80,27 +81,31 @@ function generateKeymapData() {
       }
     }
   }
-  
+
   // 收集编码器数据
   const encoderData: Record<string, number> = {}
   if (keyboardStore.encoderKeymap && keyboardStore.encoderKeymap.size > 0) {
     for (const [key, value] of keyboardStore.encoderKeymap.entries()) {
-      const [layer, encoderIdx, direction] = key
+      // 处理 key - StringMap 使用字符串 key 格式 "layer,encoderIdx,direction"
+      const [layer, encoderIdx, direction] = (key as string).split(',').map(Number)
       encoderData[`${layer}_${encoderIdx}_${direction}`] = value
     }
   }
-  
+
   // 收集宏数据
   const macrosData = keyboardStore.keyMacros
-  
+
   // 收集 Tap Dance 数据
   const tapDanceData = keyboardStore.tapDanceEntries
-  
+
   // 收集 Combo 数据
   const comboData = keyboardStore.comboEntries
-  
+
+  // 收集 RGB 灯光配置
+  const rgbData = keyboardStore.rgbConfig
+
   return {
-    version: '1.1',
+    version: '1.2',
     timestamp: new Date().toISOString(),
     layerCount: keyboardStore.layerCount,
     keymap: keymapData,
@@ -108,7 +113,8 @@ function generateKeymapData() {
     macros: macrosData,
     tapDance: tapDanceData,
     combo: comboData,
-    exportedLayers: Array.from({ length: layerCount }, (_, i) => i)
+    rgb: rgbData,
+    exportedLayers: Array.from({ length: layerCount }, (_, i) => i),
   }
 }
 
@@ -120,16 +126,16 @@ async function handleExportKeymap() {
         severity: 'warn',
         summary: t('header.waitingForKeyboard'),
         detail: 'No keymap data available. Please connect keyboard and load keymap first.',
-        life: 3000
+        life: 3000,
       })
       return
     }
-    
+
     const exportData = generateKeymapData()
     const jsonString = JSON.stringify(exportData)
     const blob = new Blob([jsonString], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
-    
+
     const link = document.createElement('a')
     link.href = url
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
@@ -138,19 +144,20 @@ async function handleExportKeymap() {
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
-    
+
     toast.add({
       severity: 'success',
       summary: t('export.exportSuccess'),
-      life: 3000
+      life: 3000,
     })
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Export keymap failed:', error)
     toast.add({
       severity: 'error',
       summary: t('export.exportFailed'),
       detail: error instanceof Error ? error.message : 'Unknown error',
-      life: 3000
+      life: 3000,
     })
   }
 }
@@ -158,11 +165,12 @@ async function handleExportKeymap() {
 function handleFileChange(event: Event) {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
-  if (!file) return
-  
+  if (!file)
+    return
+
   // 先保存文件引用，显示确认对话框
   pendingImportFile.value = file
-  
+
   // 显示确认对话框
   confirm.require({
     message: t('export.importConfirm'),
@@ -180,7 +188,7 @@ function handleFileChange(event: Event) {
       if (target) {
         target.value = ''
       }
-    }
+    },
   })
 }
 
@@ -193,107 +201,160 @@ async function executeImport(file: File) {
       if (!isValidKeymapBackup(data)) {
         throw new Error(t('export.invalidFormat'))
       }
-      
+
       // 检查是否有 layoutKeymap 可以导入
       if (!keyboardStore.layoutKeymap) {
         throw new Error('Layout keymap not available. Please connect keyboard first.')
       }
-      
+
       let successCount = 0
       let errorCount = 0
-      
+
       // 遍历所有导入的键码
       if (data.keymap) {
         for (const [key, value] of Object.entries(data.keymap)) {
           const [layer, row, col] = key.split('_').map(Number)
-          
+
           try {
             // 更新 layoutKeymap（内存中的数据）
             const mapKey = `${layer},${row},${col}`
             keyboardStore.layoutKeymap.set(mapKey, value as number)
-            
+
             // 如果键盘已连接，写入硬件
             if (keyboardStore.isConnected) {
               await keyboardStore.setKeycode([layer, row, col], value as number)
               successCount++
             }
-          } catch (err) {
+          }
+          catch (err) {
             console.error(`Failed to set keycode at [${layer},${row},${col}]:`, err)
             errorCount++
           }
         }
       }
-      
+
       // 导入编码器数据
-      if (data.encoder && keyboardStore.encoderKeymap && keyboardStore.isConnected) {
+      if (data.encoder && keyboardStore.encoderKeymap) {
         for (const [key, value] of Object.entries(data.encoder)) {
           const [layer, encoderIdx, direction] = key.split('_').map(Number)
-          
+
           try {
-            // 更新 encoderKeymap（内存中的数据）
-            keyboardStore.encoderKeymap.set([layer, encoderIdx, direction], value as number)
-            
-            // 写入硬件
-            await keyboardStore.setEncoderKeycode(layer, encoderIdx, direction === 1 ? 'cw' : 'ccw', value as number)
+            // 更新 encoderKeymap（内存中的数据）- 使用字符串 key 格式
+            keyboardStore.encoderKeymap.set(`${layer},${encoderIdx},${direction}`, value as number)
+
+            // 如果键盘已连接，写入硬件
+            if (keyboardStore.isConnected) {
+              await keyboardStore.setEncoderKeycode(layer, encoderIdx, direction === 1 ? 'cw' : 'ccw', value as number)
+            }
             successCount++
-          } catch (err) {
+          }
+          catch (err) {
             console.error(`Failed to set encoder keycode at [${layer},${encoderIdx},${direction}]:`, err)
             errorCount++
           }
         }
       }
-      
+
       // 导入宏数据
-      if (data.macros && keyboardStore.keyMacros && keyboardStore.macroCount && keyboardStore.isConnected) {
+      if (data.macros && keyboardStore.keyMacros) {
         try {
           keyboardStore.keyMacros = data.macros
-          await keyboardStore.saveMacros()
+          if (keyboardStore.isConnected && keyboardStore.macroCount) {
+            await keyboardStore.saveMacros()
+          }
           successCount++
-        } catch (err) {
+        }
+        catch (err) {
           console.error('Failed to import macros:', err)
           errorCount++
         }
       }
-      
+
       // 导入 Tap Dance 数据
-      if (data.tapDance && keyboardStore.tapDanceEntries && keyboardStore.tapDanceCount && keyboardStore.isConnected) {
+      if (data.tapDance && keyboardStore.tapDanceEntries) {
         for (let i = 0; i < data.tapDance.length; i++) {
           try {
-            await keyboardStore.setTapDanceEntry(i, data.tapDance[i])
+            if (keyboardStore.tapDanceEntries[i] !== undefined) {
+              keyboardStore.tapDanceEntries[i] = data.tapDance[i]
+            }
+            if (keyboardStore.isConnected && keyboardStore.tapDanceCount) {
+              await keyboardStore.setTapDanceEntry(i, data.tapDance[i])
+            }
             successCount++
-          } catch (err) {
+          }
+          catch (err) {
             console.error(`Failed to set tap dance entry ${i}:`, err)
             errorCount++
           }
         }
       }
-      
+
       // 导入 Combo 数据
-      if (data.combo && keyboardStore.comboEntries && keyboardStore.comboCount && keyboardStore.isConnected) {
+      if (data.combo && keyboardStore.comboEntries) {
         for (let i = 0; i < data.combo.length; i++) {
           try {
-            await keyboardStore.setComboEntry(i, data.combo[i])
+            if (keyboardStore.comboEntries[i] !== undefined) {
+              keyboardStore.comboEntries[i] = data.combo[i]
+            }
+            if (keyboardStore.isConnected && keyboardStore.comboCount) {
+              await keyboardStore.setComboEntry(i, data.combo[i])
+            }
             successCount++
-          } catch (err) {
+          }
+          catch (err) {
             console.error(`Failed to set combo entry ${i}:`, err)
             errorCount++
           }
         }
       }
-      
+
+      // 导入 RGB 灯光配置
+      if (data.rgb && keyboardStore.lightingType) {
+        try {
+          // 更新 store 中的配置
+          keyboardStore.rgbConfig = { ...data.rgb }
+
+          // 如果键盘已连接，写入硬件
+          if (keyboardStore.isConnected) {
+            const rgb = data.rgb
+            if (keyboardStore.lightingType === 'vialrgb') {
+              await keyboardStore.device?.setVialrgbConfig(
+                rgb.mode,
+                rgb.speed,
+                rgb.hue,
+                rgb.sat,
+                rgb.val,
+              )
+            }
+            else {
+              await keyboardStore.device?.setQmkRgblightMode(rgb.mode)
+              await keyboardStore.device?.setQmkRgblightColor(rgb.hue, rgb.sat)
+              await keyboardStore.device?.setQmkRgblightSpeed(rgb.speed)
+              await keyboardStore.device?.setQmkRgblightBrightness(rgb.brightness)
+            }
+            await keyboardStore.device?.saveRgb()
+          }
+          successCount++
+        }
+        catch (err) {
+          console.error('Failed to import RGB config:', err)
+          errorCount++
+        }
+      }
+
       // 不自动更新矩阵配置，矩阵应该从键盘读取
       // 如果导入的文件包含 matrix 字段，可以选择性使用
       if (data.matrix) {
         // Matrix data is available but not automatically applied
         console.log('Matrix data found in import file:', data.matrix)
       }
-      
+
       // 清空文件输入和临时变量
       if (fileInputRef.value) {
         fileInputRef.value.value = ''
       }
       pendingImportFile.value = null
-      
+
       // 显示成功提示
       let summary = t('export.importSuccess')
       if (keyboardStore.isConnected) {
@@ -302,19 +363,20 @@ async function executeImport(file: File) {
           summary += `, ${errorCount} failed`
         }
       }
-      
+
       toast.add({
         severity: 'success',
         summary,
-        life: 3000
+        life: 3000,
       })
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Import failed:', error)
       toast.add({
         severity: 'error',
         summary: t('export.importFailed'),
         detail: error instanceof Error ? error.message : 'Unknown error',
-        life: 3000
+        life: 3000,
       })
     }
   }
@@ -323,7 +385,7 @@ async function executeImport(file: File) {
       severity: 'error',
       summary: t('export.importFailed'),
       detail: 'Failed to read file',
-      life: 3000
+      life: 3000,
     })
     pendingImportFile.value = null
   }
@@ -331,11 +393,102 @@ async function executeImport(file: File) {
 }
 
 function isValidKeymapBackup(data: any): boolean {
-  return data && 
-         typeof data === 'object' && 
-         data.version && 
-         data.keymap && 
-         typeof data.keymap === 'object'
+  return data
+    && typeof data === 'object'
+    && data.version
+    && data.keymap
+    && typeof data.keymap === 'object'
+}
+
+// ========== 键盘重置功能 ==========
+async function handleResetKeyboard() {
+  if (!keyboardStore.isConnected || !keyboardStore.device) {
+    toast.add({
+      severity: 'warn',
+      summary: t('header.waitingForKeyboard'),
+      life: 3000,
+    })
+    return
+  }
+
+  confirm.require({
+    message: t('export.resetConfirm'),
+    header: t('export.reset'),
+    icon: 'pi pi-exclamation-triangle',
+    acceptClass: 'p-button-danger',
+    acceptLabel: t('export.reset'),
+    rejectLabel: t('dialog.cancel'),
+    accept: async () => {
+      try {
+        await keyboardStore.device.resetKeyboard()
+        // 重置操作会导致键盘重启，连接会断开，这是正常的
+      }
+      catch (error) {
+        console.error('Reset keyboard error:', error)
+        // 操作后连接断开是正常的
+      }
+    },
+  })
+}
+
+async function handleRestartKeyboard() {
+  if (!keyboardStore.isConnected || !keyboardStore.device) {
+    toast.add({
+      severity: 'warn',
+      summary: t('header.waitingForKeyboard'),
+      life: 3000,
+    })
+    return
+  }
+
+  confirm.require({
+    message: t('export.restartConfirm'),
+    header: t('export.restart'),
+    icon: 'pi pi-exclamation-triangle',
+    acceptClass: 'p-button-warning',
+    acceptLabel: t('export.restart'),
+    rejectLabel: t('dialog.cancel'),
+    accept: async () => {
+      try {
+        await keyboardStore.device.restartKeyboard()
+        // 重启操作会导致键盘重启，连接会断开，这是正常的
+      }
+      catch (error) {
+        console.error('Restart keyboard error:', error)
+        // 操作后连接断开是正常的
+      }
+    },
+  })
+}
+
+async function handleEnterBootloader() {
+  if (!keyboardStore.isConnected || !keyboardStore.device) {
+    toast.add({
+      severity: 'warn',
+      summary: t('header.waitingForKeyboard'),
+      life: 3000,
+    })
+    return
+  }
+
+  confirm.require({
+    message: t('export.bootloaderConfirm'),
+    header: t('export.bootloader'),
+    icon: 'pi pi-exclamation-triangle',
+    acceptClass: 'p-button-info',
+    acceptLabel: t('export.bootloader'),
+    rejectLabel: t('dialog.cancel'),
+    accept: async () => {
+      try {
+        await keyboardStore.device.enterBootloader()
+        // 进入bootloader模式会导致连接断开，这是正常的
+      }
+      catch (error) {
+        console.error('Enter bootloader error:', error)
+        // 操作后连接断开是正常的
+      }
+    },
+  })
 }
 </script>
 
@@ -349,7 +502,7 @@ function isValidKeymapBackup(data: any): boolean {
       <Icon name="tabler:keyboard-off" class="mr-3 text-2xl" />
       <span class="text-base">{{ $t('header.waitingForKeyboard') }}</span>
     </div>
-    
+
     <!-- Vial.json 导出 -->
     <div class="rounded-lg border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-700 dark:bg-surface-800">
       <div class="mb-4 flex items-start justify-between">
@@ -370,7 +523,7 @@ function isValidKeymapBackup(data: any): boolean {
         />
       </div>
     </div>
-    
+
     <!-- 键码导出导入 -->
     <div class="rounded-lg border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-700 dark:bg-surface-800">
       <div class="mb-4">
@@ -381,7 +534,7 @@ function isValidKeymapBackup(data: any): boolean {
           {{ $t('export.exportKeymapDesc') }}
         </p>
       </div>
-      
+
       <div class="mb-4 flex gap-3">
         <Button
           :label="$t('export.exportKeymap')"
@@ -401,13 +554,53 @@ function isValidKeymapBackup(data: any): boolean {
           accept=".json"
           class="hidden"
           @change="handleFileChange"
-        />
+        >
       </div>
     </div>
-    
 
+    <!-- 键盘重置 -->
+    <div class="rounded-lg border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-700 dark:bg-surface-800">
+      <div class="mb-4">
+        <h2 class="text-lg font-semibold text-surface-800 dark:text-surface-100">
+          {{ $t('export.keyboardReset') }}
+        </h2>
+        <p class="mt-1 text-sm text-surface-600 dark:text-surface-400">
+          {{ $t('export.keyboardResetDesc') }}
+        </p>
+      </div>
+
+      <div class="mb-4 flex flex-wrap gap-3">
+        <Button
+          :label="$t('export.reset')"
+          icon="tabler:refresh"
+          severity="danger"
+          :disabled="!keyboardStore.isConnected"
+          @click="handleResetKeyboard"
+        />
+        <Button
+          :label="$t('export.restart')"
+          icon="tabler:rotate-ccw"
+          severity="warning"
+          :disabled="!keyboardStore.isConnected"
+          @click="handleRestartKeyboard"
+        />
+        <Button
+          :label="$t('export.bootloader')"
+          icon="tabler:settings"
+          severity="info"
+          :disabled="!keyboardStore.isConnected"
+          @click="handleEnterBootloader"
+        />
+      </div>
+
+      <div class="mt-4 rounded-md bg-surface-100 p-3 dark:bg-surface-700">
+        <p class="text-sm text-surface-600 dark:text-surface-400">
+          <span class="font-medium">{{ $t('export.resetNote') }}:</span> {{ $t('export.resetNoteDesc') }}
+        </p>
+      </div>
+    </div>
   </div>
-  
+
   <ConfirmDialog />
   <Toast />
 </template>

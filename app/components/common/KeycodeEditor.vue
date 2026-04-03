@@ -1,5 +1,7 @@
 <script lang="ts" setup>
-import { BASIC_KEYCODES, buildKeycodeName, filterKeycodeNames, findKeycodeByCode, findKeycodeByName } from '~/utils/qmkKeycodes'
+import type { KeycodeSuggestion } from '~/types/keycode'
+import { BASIC_KEYCODES, buildKeycodeName, filterKeycodeNames, filterKeycodeSuggestions, findKeycodeByCode, findKeycodeByName } from '~/types/keycode'
+import KeycodeSuggestions from './KeycodeSuggestions.vue'
 
 const props = defineProps<{
   visible: boolean
@@ -51,11 +53,15 @@ const previewSymbol = computed(() => {
   const code = currentKeycode.value
 
   // 检查是否是user键
-  if (code >= 0x0840 && code <= 0x085F) {
-    const index = code - 0x0840
-    if (index < customKeycodes.length) {
+  if ((code >= 0x0840 && code <= 0x085F) || (code >= 0x7E00 && code <= 0x7E1F)) {
+    const index = code >= 0x7E00 ? code - 0x7E00 : code - 0x0840
+    if (index < customKeycodes.length && customKeycodes[index]?.shortName) {
       // 返回shortName
       return [null, customKeycodes[index].shortName]
+    }
+    else if (code >= 0x7E00 && code <= 0x7E1F) {
+      // 如果没有自定义键码或shortName为空，显示为userX
+      return [null, `user${index}`]
     }
   }
 
@@ -63,7 +69,21 @@ const previewSymbol = computed(() => {
 })
 
 const previewRmk = computed(() => {
-  return keyToRmk(currentKeycode.value)
+  const code = currentKeycode.value
+  const customKeycodes = keyboardStore.vialJson?.customKeycodes || []
+  
+  // 检查是否是user键
+  if (code >= 0x7E00 && code <= 0x7E1F) {
+    const index = code - 0x7E00
+    if (index < customKeycodes.length && customKeycodes[index]?.shortName) {
+      return customKeycodes[index].shortName
+    }
+    else {
+      return `user${index}`
+    }
+  }
+  
+  return keyToRmk(code)
 })
 
 // 解析键码名称为分层显示
@@ -154,16 +174,76 @@ const fullKeyName = computed(() => {
   return `${modPrefix}(${baseName})`
 })
 
+// 验证键码名称是否有效
 const isKeyNameValid = computed(() => {
-  return keyNameInput.value && findKeycodeByName(keyNameInput.value)?.code !== 0
+  const name = keyNameInput.value.trim()
+  if (!name)
+    return false
+  
+  // 检查是否是预定义的完整键码（如 MO(1)、LCTL_T(kc) 等）
+  const keycodeEntry = findKeycodeByName(name)
+  if (keycodeEntry && keycodeEntry.code !== 0)
+    return true
+  
+  // 检查是否是基础键码（如 KC_A、KC_B 等）
+  const baseKey = BASIC_KEYCODES.find(kc => kc.name.toUpperCase() === name.toUpperCase())
+  if (baseKey && baseKey.code !== 0)
+    return true
+  
+  // 检查是否是修饰键组合格式（如 LCTL(KC_A)、RSFT(KC_B) 等）
+  const modPattern = /^(L|R)(CTL|SFT|ALT|GUI)\(([^)]+)\)$/i
+  const match = name.match(modPattern)
+  if (match) {
+    const innerKeyName = match[3]
+    // 递归检查内部键名是否有效
+    const innerKey = BASIC_KEYCODES.find(kc => kc.name.toUpperCase() === innerKeyName.toUpperCase())
+    if (innerKey && innerKey.code !== 0)
+      return true
+  }
+  
+  return false
 })
 
-const filteredKeyNames = computed(() => {
+// 验证当前键码是否有效（用于保存按钮的禁用状态）
+const isValidKeycode = computed(() => {
+  const code = currentKeycode.value
+  // 检查键码是否在有效范围内（0x0000 到 0xFFFF）
+  if (code < 0 || code > 0xFFFF)
+    return false
+  
+  // 允许任意键码，只要在有效范围内
+  return true
+})
+
+// 键码名称显示，当没有对应键码时显示"无对应键码"
+const displayKeyName = computed(() => {
+  const code = currentKeycode.value
+  if (code === 0)
+    return ''
+  
+  // 尝试查找完整键码名称
+  const keycodeEntry = findKeycodeByCode(code)
+  if (keycodeEntry) {
+    return keycodeEntry.name
+  }
+  
+  // 尝试查找基础键码名称
+  const baseKeycode = code & 0x00FF
+  const baseKey = BASIC_KEYCODES.find(kc => kc.code === baseKeycode)
+  if (baseKey) {
+    return baseKey.name
+  }
+  
+  // 没有对应键码
+  return $t('dialog.noKeycode')
+})
+
+const filteredKeyNames = computed<KeycodeSuggestion[]>(() => {
   const inputValue = keyNameInput.value
   if (!inputValue)
     return []
 
-  return filterKeycodeNames(inputValue)
+  return filterKeycodeSuggestions(inputValue)
 })
 
 const showSuggestions = ref(false)
@@ -558,36 +638,8 @@ watch(() => props.visible, (visible) => {
     modifiers.value.alt = !!(code & MODIFIER_ALT)
     modifiers.value.gui = !!(code & MODIFIER_GUI)
 
-    // 第二步：查找并设置键码名称（使用完整格式如 LCTL(KC_C)）
-    const keycodeEntry = findKeycodeByCode(code)
-    if (keycodeEntry) {
-      keyNameInput.value = keycodeEntry.name
-    }
-    else {
-      // 如果不是预定义的键码，使用完整格式名称
-      const baseKeycode = code & 0x00FF
-      const baseKey = BASIC_KEYCODES.find(kc => kc.code === baseKeycode)
-      const baseName = baseKey?.name || ''
-
-      // 构建完整格式名称
-      const modParts: string[] = []
-      if (modifiers.value.ctrl)
-        modParts.push(isRightModifier.value ? 'RCTL' : 'LCTL')
-      if (modifiers.value.shift)
-        modParts.push(isRightModifier.value ? 'RSFT' : 'LSFT')
-      if (modifiers.value.alt)
-        modParts.push(isRightModifier.value ? 'RALT' : 'LALT')
-      if (modifiers.value.gui)
-        modParts.push(isRightModifier.value ? 'RGUI' : 'LGUI')
-
-      if (modParts.length === 0) {
-        keyNameInput.value = baseName
-      }
-      else {
-        const modPrefix = modParts.join('+')
-        keyNameInput.value = `${modPrefix}(${baseName})`
-      }
-    }
+    // 同步设置键码名称
+    keyNameInput.value = displayKeyName.value
 
     console.log('KeycodeEditor initialized with:', {
       code,
@@ -619,15 +671,9 @@ watch(keycodeInput, (val) => {
   const num = Number.parseInt(val) || 0
   hexInput.value = `0x${num.toString(16).toUpperCase().padStart(4, '0')}`
   const baseKeycode = num & 0x00FF
-  // 使用完整键码映射查找名称
-  const keycodeEntry = findKeycodeByCode(num)
-  if (keycodeEntry) {
-    keyNameInput.value = keycodeEntry.name
-  }
-  else {
-    keyNameInput.value = BASIC_KEYCODES.find(kc => kc.code === baseKeycode)?.name || ''
-  }
-  // 检查是否是右修饰键（第 12 位为 1 表示右修饰键）
+  // 同步更新键码名称
+  keyNameInput.value = displayKeyName.value
+  // 只更新修饰键状态
   isRightModifier.value = !!(num & 0x1000)
 
   // 设置标志，防止触发 modifiers watch
@@ -665,15 +711,9 @@ watch(hexInput, (val) => {
   const num = Number.parseInt(hex, 16) || 0
   keycodeInput.value = num.toString()
   const baseKeycode = num & 0x00FF
-  // 使用完整键码映射查找名称
-  const keycodeEntry = findKeycodeByCode(num)
-  if (keycodeEntry) {
-    keyNameInput.value = keycodeEntry.name
-  }
-  else {
-    keyNameInput.value = BASIC_KEYCODES.find(kc => kc.code === baseKeycode)?.name || ''
-  }
-  // 检查是否是右修饰键（第 12 位为 1 表示右修饰键）
+  // 同步更新键码名称
+  keyNameInput.value = displayKeyName.value
+  // 只更新修饰键状态
   isRightModifier.value = !!(num & 0x1000)
 
   // 设置标志，防止触发 modifiers watch
@@ -721,26 +761,62 @@ watch(keyNameInput, (val) => {
     modifiers.value.gui = !!(code & MODIFIER_GUI)
   }
   else {
-    // 如果不是预定义的键码，使用基础键码映射
-    const baseCode = keyNameToCode(val)
-    if (baseCode !== 0) {
-      // 保留当前的修饰键状态
-      const currentModifiers = Number.parseInt(keycodeInput.value) || 0
-      const isRight = !!(currentModifiers & 0x1000)
-      let newCode = baseCode
+    // 检查是否是修饰键组合格式（如 LCTL(KC_A)、RSFT(KC_B) 等）
+    const modPattern = /^(L|R)(CTL|SFT|ALT|GUI)\(([^)]+)\)$/i
+    const match = val.match(modPattern)
+    if (match) {
+      const modType = match[2].toUpperCase()
+      const isRight = match[1].toUpperCase() === 'R'
+      const innerKeyName = match[3]
+      
+      // 查找内部键码
+      const innerKey = BASIC_KEYCODES.find(kc => kc.name.toUpperCase() === innerKeyName.toUpperCase())
+      if (innerKey) {
+        let newCode = innerKey.code
+        
+        // 添加修饰键
+        if (modType === 'CTL')
+          newCode |= isRight ? MODIFIER_RCTRL : MODIFIER_CTRL
+        else if (modType === 'SFT')
+          newCode |= isRight ? MODIFIER_RSHIFT : MODIFIER_SHIFT
+        else if (modType === 'ALT')
+          newCode |= isRight ? MODIFIER_RALT : MODIFIER_ALT
+        else if (modType === 'GUI')
+          newCode |= isRight ? MODIFIER_RGUI : MODIFIER_GUI
+        
+        keycodeInput.value = newCode.toString()
+        hexInput.value = `0x${newCode.toString(16).toUpperCase().padStart(4, '0')}`
+        
+        // 更新修饰键状态
+        isRightModifier.value = isRight
+        modifiers.value.ctrl = modType === 'CTL'
+        modifiers.value.shift = modType === 'SFT'
+        modifiers.value.alt = modType === 'ALT'
+        modifiers.value.gui = modType === 'GUI'
+      }
+    }
+    else {
+      // 如果不是预定义的键码或修饰键组合，使用基础键码映射
+      const baseCode = keyNameToCode(val)
+      if (baseCode !== 0) {
+        // 保留当前的修饰键状态
+        const currentModifiers = Number.parseInt(keycodeInput.value) || 0
+        const isRight = !!(currentModifiers & 0x1000)
+        let newCode = baseCode
 
-      // 添加当前的修饰键
-      if (modifiers.value.ctrl)
-        newCode |= isRight ? MODIFIER_RCTRL : MODIFIER_CTRL
-      if (modifiers.value.shift)
-        newCode |= isRight ? MODIFIER_RSHIFT : MODIFIER_SHIFT
-      if (modifiers.value.alt)
-        newCode |= isRight ? MODIFIER_RALT : MODIFIER_ALT
-      if (modifiers.value.gui)
-        newCode |= isRight ? MODIFIER_RGUI : MODIFIER_GUI
+        // 添加当前的修饰键
+        if (modifiers.value.ctrl)
+          newCode |= isRight ? MODIFIER_RCTRL : MODIFIER_CTRL
+        if (modifiers.value.shift)
+          newCode |= isRight ? MODIFIER_RSHIFT : MODIFIER_SHIFT
+        if (modifiers.value.alt)
+          newCode |= isRight ? MODIFIER_RALT : MODIFIER_ALT
+        if (modifiers.value.gui)
+          newCode |= isRight ? MODIFIER_RGUI : MODIFIER_GUI
 
-      keycodeInput.value = newCode.toString()
-      hexInput.value = `0x${newCode.toString(16).toUpperCase().padStart(4, '0')}`
+        keycodeInput.value = newCode.toString()
+        hexInput.value = `0x${newCode.toString(16).toUpperCase().padStart(4, '0')}`
+      }
     }
   }
 })
@@ -779,34 +855,7 @@ watch(modifiers, (newModifiers) => {
   if (baseKeycode !== 0) {
     keycodeInput.value = newCode.toString()
     hexInput.value = `0x${newCode.toString(16).toUpperCase().padStart(4, '0')}`
-    // 使用完整键码映射查找名称
-    const keycodeEntry = findKeycodeByCode(newCode)
-    if (keycodeEntry) {
-      keyNameInput.value = keycodeEntry.name
-    }
-    else {
-      // 构建完整格式名称如 LCTL(KC_C)
-      const baseKey = BASIC_KEYCODES.find(kc => kc.code === baseKeycode)
-      const baseName = baseKey?.name || ''
-
-      const modParts: string[] = []
-      if (newModifiers.ctrl)
-        modParts.push(isRightModifier.value ? 'RCTL' : 'LCTL')
-      if (newModifiers.shift)
-        modParts.push(isRightModifier.value ? 'RSFT' : 'LSFT')
-      if (newModifiers.alt)
-        modParts.push(isRightModifier.value ? 'RALT' : 'LALT')
-      if (newModifiers.gui)
-        modParts.push(isRightModifier.value ? 'RGUI' : 'LGUI')
-
-      if (modParts.length === 0) {
-        keyNameInput.value = baseName
-      }
-      else {
-        const modPrefix = modParts.join('+')
-        keyNameInput.value = `${modPrefix}(${baseName})`
-      }
-    }
+    // 不再自动更新键码名称，由用户手动输入
   }
 
   console.log('modifiers watch finished:', {
@@ -844,14 +893,7 @@ watch(isRightModifier, (newVal) => {
   if (baseKeycode !== 0) {
     keycodeInput.value = newCode.toString()
     hexInput.value = `0x${newCode.toString(16).toUpperCase().padStart(4, '0')}`
-    // 使用完整键码映射查找名称
-    const keycodeEntry = findKeycodeByCode(newCode)
-    if (keycodeEntry) {
-      keyNameInput.value = keycodeEntry.name
-    }
-    else {
-      keyNameInput.value = buildKeycodeName(baseKeycode, modifiers.value, isRightModifier.value)
-    }
+    // 不再自动更新键码名称，由用户手动输入
   }
 })
 
@@ -936,19 +978,12 @@ function toggleModifier(key: keyof typeof modifiers.value) {
                 @focus="isInputFocused = true; showSuggestions = true"
                 @blur="isInputFocused = false; setTimeout(() => showSuggestions = false, 200)"
               />
-              <div
-                v-if="showSuggestions && filteredKeyNames.length > 0 && isInputFocused"
-                class="absolute inset-x-0 top-full z-50 mt-1 max-h-48 overflow-y-auto rounded-md border border-surface-300 bg-white shadow-lg dark:border-surface-600 dark:bg-surface-800"
-              >
-                <div
-                  v-for="name in filteredKeyNames"
-                  :key="name"
-                  class="cursor-pointer px-3 py-1.5 font-mono text-sm text-surface-700 hover:bg-primary hover:text-white dark:text-surface-200"
-                  @mousedown="selectSuggestion(name)"
-                >
-                  {{ name }}
-                </div>
-              </div>
+              <!-- 使用 KeycodeSuggestions 组件显示候选键 -->
+              <KeycodeSuggestions
+                :suggestions="filteredKeyNames"
+                :visible="showSuggestions && isInputFocused"
+                @select="selectSuggestion"
+              />
             </div>
           </div>
         </div>
@@ -1100,6 +1135,7 @@ function toggleModifier(key: keyof typeof modifiers.value) {
           severity="primary"
           size="small"
           :label="$t('dialog.save')"
+          :disabled="!isValidKeycode"
           @click="handleSave"
         />
       </div>

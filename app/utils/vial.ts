@@ -1,39 +1,32 @@
 import {
-  CMD_VIA_GET_PROTOCOL_VERSION,
-  CMD_VIA_GET_KEYBOARD_VALUE,
-  CMD_VIA_SET_KEYBOARD_VALUE,
-  CMD_VIA_GET_KEYCODE,
-  CMD_VIA_SET_KEYCODE,
-  CMD_VIA_LIGHTING_SET_VALUE,
-  CMD_VIA_LIGHTING_GET_VALUE,
-  CMD_VIA_LIGHTING_SAVE,
-  CMD_VIA_MACRO_GET_COUNT,
-  CMD_VIA_MACRO_GET_BUFFER_SIZE,
-  CMD_VIA_MACRO_GET_BUFFER,
-  CMD_VIA_MACRO_SET_BUFFER,
   CMD_VIA_GET_LAYER_COUNT,
   CMD_VIA_KEYMAP_GET_BUFFER,
+  CMD_VIA_LIGHTING_GET_VALUE,
+  CMD_VIA_LIGHTING_SAVE,
+  CMD_VIA_LIGHTING_SET_VALUE,
+  CMD_VIA_MACRO_GET_BUFFER,
+  CMD_VIA_MACRO_GET_BUFFER_SIZE,
+  CMD_VIA_MACRO_GET_COUNT,
+  CMD_VIA_MACRO_SET_BUFFER,
+  CMD_VIA_SET_KEYCODE,
   CMD_VIA_VIAL_PREFIX,
-  CMD_VIAL_GET_KEYBOARD_ID,
-  CMD_VIAL_GET_SIZE,
+  CMD_VIAL_DYNAMIC_ENTRY_OP,
   CMD_VIAL_GET_DEFINITION,
   CMD_VIAL_GET_ENCODER,
+  CMD_VIAL_GET_SIZE,
   CMD_VIAL_SET_ENCODER,
-  CMD_VIAL_GET_UNLOCK_STATUS,
-  CMD_VIAL_UNLOCK_START,
-  CMD_VIAL_UNLOCK_POLL,
-  CMD_VIAL_LOCK,
-  CMD_VIAL_QMK_SETTINGS_QUERY,
-  CMD_VIAL_QMK_SETTINGS_GET,
-  CMD_VIAL_QMK_SETTINGS_SET,
-  CMD_VIAL_QMK_SETTINGS_RESET,
-  CMD_VIAL_DYNAMIC_ENTRY_OP,
+  DYNAMIC_VIAL_COMBO_GET,
+  DYNAMIC_VIAL_COMBO_SET,
   DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES,
   DYNAMIC_VIAL_TAP_DANCE_GET,
   DYNAMIC_VIAL_TAP_DANCE_SET,
-  DYNAMIC_VIAL_COMBO_GET,
-  DYNAMIC_VIAL_COMBO_SET,
-  VialConstants
+  QMK_RGBLIGHT_BRIGHTNESS,
+  QMK_RGBLIGHT_COLOR,
+  QMK_RGBLIGHT_EFFECT,
+  QMK_RGBLIGHT_EFFECT_SPEED,
+  VialConstants,
+  VIALRGB_GET_MODE,
+  VIALRGB_SET_MODE,
 } from '../types/constants'
 
 export class VialDevice implements VialInterface {
@@ -60,24 +53,91 @@ export class VialDevice implements VialInterface {
   }
 
   private async readChunk(cmd: number, size: number): Promise<number[]> {
+    const MAX_RETRIES = 3
     const chunk: number[] = []
-    const blockNum = Math.ceil(size / VialConstants.BUFFER_CHUNK_SIZE)
-    for (let block = 0; block < blockNum; block++) {
-      const data = await this.device.writeRead([CMD_VIA_VIAL_PREFIX, cmd, block])
-      chunk.push(...data)
+    const MSG_LEN = 32  // Message length from vial protocol
+    
+    let remaining = size
+    let block = 0
+    
+    while (remaining > 0) {
+      let lastError: any
+      let success = false
+      
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+          // Pack block number as 4-byte little-endian integer (like struct.pack("<BBI", ...))
+          const msg = new Uint8Array(6)
+          msg[0] = CMD_VIA_VIAL_PREFIX
+          msg[1] = cmd
+          msg[2] = block & 0xFF
+          msg[3] = (block >> 8) & 0xFF
+          msg[4] = (block >> 16) & 0xFF
+          msg[5] = (block >> 24) & 0xFF
+          
+          const data = await this.device.writeRead(Array.from(msg))
+          
+          // If remaining size is less than MSG_LEN, only take what we need
+          // Otherwise take all MSG_LEN bytes
+          const bytesToTake = Math.min(remaining, MSG_LEN)
+          chunk.push(...data.slice(0, bytesToTake))
+          
+          success = true
+          break
+        } catch (error) {
+          lastError = error
+          console.warn(`readChunk: Attempt ${attempt + 1} failed for block ${block}:`, error)
+          if (attempt < MAX_RETRIES - 1) {
+            // Wait a bit before retrying
+            await new Promise(resolve => setTimeout(resolve, 100))
+          }
+        }
+      }
+      
+      if (!success) {
+        throw new Error(`Failed to read block ${block}: ${lastError?.message || 'Unknown error'}`)
+      }
+      
+      remaining -= MSG_LEN
+      block++
     }
+    
     return chunk.slice(0, size)
   }
 
   private async readOffset(cmd: number, size: number, offset: number): Promise<number[]> {
+    const MAX_RETRIES = 3
     const chunk: number[] = []
 
     for (let x = 0; x < size; x += VialConstants.BUFFER_CHUNK_SIZE) {
       const currentReadOffset = offset + x
       const sz = Math.min(size - x, VialConstants.BUFFER_CHUNK_SIZE)
+      let lastError: any
 
-      const data = await this.device.writeRead([cmd, (currentReadOffset >> 8) & 0xFF, currentReadOffset & 0xFF, sz])
-      chunk.push(...data.slice(VialConstants.HEADER_SIZE, VialConstants.HEADER_SIZE + sz))
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+          // Use little-endian for offset (like struct.pack("<BHH", ...))
+          const msg = [
+            cmd,
+            currentReadOffset & 0xFF,  // Low byte first (little-endian)
+            (currentReadOffset >> 8) & 0xFF,  // High byte second
+            sz
+          ]
+          const data = await this.device.writeRead(msg)
+          chunk.push(...data.slice(VialConstants.HEADER_SIZE, VialConstants.HEADER_SIZE + sz))
+          break
+        } catch (error) {
+          lastError = error
+          console.warn(`readOffset: Attempt ${attempt + 1} failed for offset ${currentReadOffset}:`, error)
+          if (attempt < MAX_RETRIES - 1) {
+            await new Promise(resolve => setTimeout(resolve, 100))
+          }
+        }
+      }
+
+      if (chunk.length < x + sz) {
+        throw new Error(`Failed to read offset ${currentReadOffset}: ${lastError?.message || 'Unknown error'}`)
+      }
     }
     return chunk.slice(0, size)
   }
@@ -324,11 +384,27 @@ export class VialDevice implements VialInterface {
   }
 
   async vialJson(): Promise<VialJson> {
-    const sizeData = await this.device.writeRead([CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_SIZE])
-    const size = this.readUint32LE(sizeData)
-    const data = await this.readChunk(CMD_VIAL_GET_DEFINITION, size)
-    const rawText = await this.decompressToString(data)
-    return JSON.parse(rawText) as VialJson
+    const MAX_RETRIES = 3
+    let lastError: any
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const sizeData = await this.device.writeRead([CMD_VIA_VIAL_PREFIX, CMD_VIAL_GET_SIZE])
+        const size = this.readUint32LE(sizeData)
+        const data = await this.readChunk(CMD_VIAL_GET_DEFINITION, size)
+        const rawText = await this.decompressToString(data)
+        return JSON.parse(rawText) as VialJson
+      } catch (error) {
+        lastError = error
+        console.warn(`Attempt ${attempt + 1} failed:`, error)
+        if (attempt < MAX_RETRIES - 1) {
+          // Wait a bit before retrying
+          await new Promise(resolve => setTimeout(resolve, 100))
+        }
+      }
+    }
+
+    throw new Error(`Failed to get vial json after ${MAX_RETRIES} attempts: ${lastError?.message || 'Unknown error'}`)
   }
 
   layoutKeymap(
@@ -343,10 +419,22 @@ export class VialDevice implements VialInterface {
         continue
       }
 
-      const [row, col] = key.labels[0]!.split(',').map(n => Number.parseInt(n, 10))
-      if (Number.isNaN(row) || Number.isNaN(col)) {
+      // Parse the first label to get row,col
+      // The label format might be "row,col" or "row,col\nlayer1\nlayer2..."
+      const firstLabel = key.labels[0]
+      if (!firstLabel) {
         continue
       }
+      
+      // Split by newline and take the first part
+      const labelParts = firstLabel.split('\n')[0]
+      const [row, col] = labelParts.split(',').map(n => Number.parseInt(n, 10))
+      
+      if (Number.isNaN(row) || Number.isNaN(col)) {
+        console.warn('Invalid key label:', firstLabel, 'for key:', key)
+        continue
+      }
+      
       for (let layer = 0; layer < layerCount; layer++) {
         const keycode = keymap.get([layer, row!, col!])
         if (keycode !== undefined) {
@@ -505,5 +593,114 @@ export class VialDevice implements VialInterface {
       (entry[4] >> 8) & 0xFF,
     ]
     await this.device.writeRead(msg)
+  }
+
+  // QMK RGBLight methods
+  async getQmkRgblightConfig(): Promise<{ mode: number, hue: number, sat: number, brightness: number, speed: number }> {
+    const brightnessData = await this.device.writeRead([CMD_VIA_LIGHTING_GET_VALUE, QMK_RGBLIGHT_BRIGHTNESS])
+    const effectData = await this.device.writeRead([CMD_VIA_LIGHTING_GET_VALUE, QMK_RGBLIGHT_EFFECT])
+    const speedData = await this.device.writeRead([CMD_VIA_LIGHTING_GET_VALUE, QMK_RGBLIGHT_EFFECT_SPEED])
+    const colorData = await this.device.writeRead([CMD_VIA_LIGHTING_GET_VALUE, QMK_RGBLIGHT_COLOR])
+
+    return {
+      mode: effectData[2] ?? 0,
+      hue: colorData[2] ?? 0,
+      sat: colorData[3] ?? 255,
+      brightness: brightnessData[2] ?? 255,
+      speed: speedData[2] ?? 0,
+    }
+  }
+
+  async setQmkRgblightMode(mode: number): Promise<void> {
+    await this.device.writeRead([CMD_VIA_LIGHTING_SET_VALUE, QMK_RGBLIGHT_EFFECT, mode])
+  }
+
+  async setQmkRgblightBrightness(brightness: number): Promise<void> {
+    await this.device.writeRead([CMD_VIA_LIGHTING_SET_VALUE, QMK_RGBLIGHT_BRIGHTNESS, brightness])
+  }
+
+  async setQmkRgblightSpeed(speed: number): Promise<void> {
+    await this.device.writeRead([CMD_VIA_LIGHTING_SET_VALUE, QMK_RGBLIGHT_EFFECT_SPEED, speed])
+  }
+
+  async setQmkRgblightColor(hue: number, sat: number): Promise<void> {
+    await this.device.writeRead([CMD_VIA_LIGHTING_SET_VALUE, QMK_RGBLIGHT_COLOR, hue, sat])
+  }
+
+  // VialRGB methods
+  async getVialrgbConfig(): Promise<{ mode: number, hue: number, sat: number, val: number, speed: number }> {
+    const data = await this.device.writeRead([CMD_VIA_LIGHTING_GET_VALUE, VIALRGB_GET_MODE])
+    // Response: [cmd, subcmd, mode_l, mode_h, speed, h, s, v, ...]
+    const mode = data[2]! | (data[3]! << 8)
+    const speed = data[4]!
+    const h = data[5]!
+    const s = data[6]!
+    const v = data[7]!
+
+    return {
+      mode,
+      hue: h,
+      sat: s,
+      val: v,
+      speed,
+    }
+  }
+
+  async setVialrgbConfig(mode: number, speed: number, h: number, s: number, v: number): Promise<void> {
+    // VialRGB uses a single command to set all values
+    // Format: [CMD_VIA_LIGHTING_SET_VALUE, VIALRGB_SET_MODE, mode_l, mode_h, speed, h, s, v]
+    await this.device.writeRead([
+      CMD_VIA_LIGHTING_SET_VALUE,
+      VIALRGB_SET_MODE,
+      mode & 0xFF,
+      (mode >> 8) & 0xFF,
+      speed,
+      h,
+      s,
+      v,
+    ])
+  }
+
+  // Generic RGB save
+  async saveRgb(): Promise<void> {
+    await this.device.writeRead([CMD_VIA_LIGHTING_SAVE])
+  }
+
+  // Layout options methods
+  async getLayoutOptions(): Promise<number> {
+    const data = await this.device.writeRead([CMD_VIA_GET_KEYBOARD_VALUE, VIA_LAYOUT_OPTIONS])
+    return (data[2]! << 24) | (data[3]! << 16) | (data[4]! << 8) | data[5]!
+  }
+
+  async setLayoutOptions(options: number): Promise<void> {
+    await this.device.writeRead([CMD_VIA_SET_KEYBOARD_VALUE, VIA_LAYOUT_OPTIONS, (options >> 24) & 0xFF, (options >> 16) & 0xFF, (options >> 8) & 0xFF, options & 0xFF])
+  }
+
+  // Reset functions
+  async resetKeyboard(): Promise<void> {
+    // 发送 0xAB 01 后跟 30 个 0
+    const data = new Uint8Array(32)
+    data[0] = 0xAB
+    data[1] = 0x01
+    // 其余字节默认为 0
+    await this.device.writeRead(Array.from(data))
+  }
+
+  async restartKeyboard(): Promise<void> {
+    // 发送 0xAB 01 后跟 30 个 0
+    const data = new Uint8Array(32)
+    data[0] = 0xAB
+    data[1] = 0x02
+    // 其余字节默认为 0
+    await this.device.writeRead(Array.from(data))
+  }
+
+  async enterBootloader(): Promise<void> {
+    // 发送 0xAB 00 后跟 30 个 0
+    const data = new Uint8Array(32)
+    data[0] = 0xAB
+    data[1] = 0x00
+    // 其余字节默认为 0
+    await this.device.writeRead(Array.from(data))
   }
 }

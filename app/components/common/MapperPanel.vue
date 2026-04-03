@@ -14,6 +14,8 @@ const keyTabs = computed(() => [
   { value: 'joystick', title: t('mapper.joystick') },
   { value: 'backlight', title: t('mapper.backlight') },
   { value: 'app-media-mouse', title: t('mapper.appMediaMouse') },
+  { value: 'dial', title: t('mapper.dial') },
+  { value: 'midi', title: t('mapper.midi') },
   { value: 'tap-dance', title: t('mapper.tapDance') },
   { value: 'user', title: t('mapper.user') },
 ])
@@ -44,11 +46,15 @@ function codeToKey(keycode: number): Key {
   let symbol = [...keyToLable(keycode)]
 
   // 检查是否是user键
-  if (keycode >= 0x0840 && keycode <= 0x085F) {
-    const index = keycode - 0x0840
-    if (index < customKeycodes.length) {
+  if (keycode >= 0x7E00 && keycode <= 0x7E1F) {
+    const index = keycode - 0x7E00
+    if (index < customKeycodes.length && customKeycodes[index]?.shortName) {
       // 设置symbol[0]为null，symbol[1]为shortName，这样会在中间显示且没有横杠
       symbol = [null, customKeycodes[index].shortName]
+    }
+    else {
+      // 如果没有自定义键码或shortName为空，显示为userX
+      symbol = [null, `user${index}`]
     }
   }
 
@@ -83,12 +89,28 @@ function parseKleLayout(layout: KeymapItem[][]): Key[] {
 
   return kle.keys.map((k) => {
     const keycode = Number.parseInt(k.labels[0]!, 16)
+    let symbol = [...keyToLable(keycode)]
+
+    // 检查是否是user键
+    if (keycode >= 0x7E00 && keycode <= 0x7E1F) {
+      const customKeycodes = keyboardStore.vialJson?.customKeycodes || []
+      const index = keycode - 0x7E00
+      if (index < customKeycodes.length && customKeycodes[index]?.shortName) {
+        // 设置symbol[0]为null，symbol[1]为shortName，这样会在中间显示且没有横杠
+        symbol = [null, customKeycodes[index].shortName]
+      }
+      else {
+        // 如果没有自定义键码或shortName为空，显示为userX
+        symbol = [null, `user${index}`]
+      }
+    }
+
     return {
       geometry: pikeGeo(k),
       position: { row: 0, col: 0 },
       info: {
         code: keycode,
-        symbol: [...keyToLable(keycode)],
+        symbol,
       },
     } as Key
   })
@@ -115,11 +137,16 @@ const quantumRows = computed(() => rowsFromCodes([
   ...codesInRange(0x0800, 0x083F),
 ]))
 
-const joystickRows = computed(() => rowsFromCodes(codesInRange(0x0400, 0x041F)))
-const backlightRows = computed(() => rowsFromCodes(codesInRange(0x0600, 0x0606)))
+const joystickRows = computed(() => rowsFromCodes(codesInRange(0x7400, 0x741F)))
+const backlightRows = computed(() => rowsFromCodes(codesInRange(0x0600, 0x0634)))
 const appMediaMouseRows = computed(() => rowsFromCodes([
-  ...codesInRange(0x0065, 0x0065),
-  ...codesInRange(0x00A8, 0x00DF),
+  ...codesInRange(0x0068, 0x00DF),
+]))
+const dialRows = computed(() => rowsFromCodes([
+  ...codesInRange(0x7200, 0x7201),
+]))
+const midiRows = computed(() => rowsFromCodes([
+  ...codesInRange(0x0200, 0x028F),
 ]))
 const tapDanceRows = computed(() => {
   const count = keyboardStore.tapDanceCount || 0
@@ -128,9 +155,9 @@ const tapDanceRows = computed(() => {
 const userRows = computed(() => {
   const customKeycodes = keyboardStore.vialJson?.customKeycodes || []
   if (customKeycodes.length > 0) {
-    return customKeycodes.map((_, index) => 0x0840 + index)
+    return customKeycodes.map((_, index) => 0x7E00 + index)
   }
-  return rowsFromCodes(codesInRange(0x0840, 0x085F))
+  return rowsFromCodes(codesInRange(0x7E00, 0x7E1F))
 })
 </script>
 
@@ -179,6 +206,16 @@ const userRows = computed(() => {
         <TabPanel value="app-media-mouse">
           <div class="mb-2 flex flex-wrap gap-2">
             <Key v-for="code in appMediaMouseRows" :key="code" :key-info="codeToKey(code)" @click="(_zone) => emit('setKey', codeToKey(code))" />
+          </div>
+        </TabPanel>
+        <TabPanel value="dial">
+          <div class="mb-2 flex flex-wrap gap-2">
+            <Key v-for="code in dialRows" :key="code" :key-info="codeToKey(code)" @click="(_zone) => emit('setKey', codeToKey(code))" />
+          </div>
+        </TabPanel>
+        <TabPanel value="midi">
+          <div class="mb-2 flex flex-wrap gap-2">
+            <Key v-for="code in midiRows" :key="code" :key-info="codeToKey(code)" @click="(_zone) => emit('setKey', codeToKey(code))" />
           </div>
         </TabPanel>
         <TabPanel value="tap-dance">

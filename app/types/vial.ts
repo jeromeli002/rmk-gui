@@ -17,6 +17,21 @@ export interface VialInterface {
   setKeycode: (lyrRowCol: [number, number, number], keycode: number) => Promise<void>
   encoderKeycode: (layer: number, encoderIdx: number, direction: EncoderDirection) => Promise<number>
   setEncoderKeycode: (layer: number, encoderIdx: number, direction: EncoderDirection, keycode: number) => Promise<void>
+  // QMK RGBLight
+  getQmkRgblightConfig: () => Promise<{ mode: number, hue: number, sat: number, brightness: number, speed: number }>
+  setQmkRgblightMode: (mode: number) => Promise<void>
+  setQmkRgblightBrightness: (brightness: number) => Promise<void>
+  setQmkRgblightSpeed: (speed: number) => Promise<void>
+  setQmkRgblightColor: (hue: number, sat: number) => Promise<void>
+  // VialRGB
+  getVialrgbConfig: () => Promise<{ mode: number, hue: number, sat: number, val: number, speed: number }>
+  setVialrgbConfig: (mode: number, speed: number, h: number, s: number, v: number) => Promise<void>
+  // Generic RGB save
+  saveRgb: () => Promise<void>
+  // Reset functions
+  resetKeyboard: () => Promise<void>
+  restartKeyboard: () => Promise<void>
+  enterBootloader: () => Promise<void>
 }
 
 export interface CustomKeycode {

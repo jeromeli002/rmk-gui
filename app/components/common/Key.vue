@@ -14,13 +14,39 @@ const emit = defineEmits<{
 const showTooltip = ref(false)
 let hoverTimer: ReturnType<typeof setTimeout> | null = null
 
+const keyboardStore = useKeyboardStore()
+
 const keyDetail = computed(() => {
-  const info = keyToInfo(keyInfo.info.code)
+  const code = keyInfo.info.code
+  const customKeycodes = keyboardStore.vialJson?.customKeycodes || []
+  
+  // 检查是否是user键
+  if (code >= 0x7E00 && code <= 0x7E1F) {
+    const index = code - 0x7E00
+    if (index < customKeycodes.length && customKeycodes[index]?.shortName) {
+      return {
+        code: `0x${code.toString(16).toUpperCase().padStart(4, '0')}`,
+        name: customKeycodes[index].shortName,
+      }
+    }
+    else {
+      return {
+        code: `0x${code.toString(16).toUpperCase().padStart(4, '0')}`,
+        name: `user${index}`,
+      }
+    }
+  }
+  
+  const info = keyToInfo(code)
   return {
-    code: `0x${keyInfo.info.code.toString(16).toUpperCase().padStart(4, '0')}`,
+    code: `0x${code.toString(16).toUpperCase().padStart(4, '0')}`,
     name: info?.rmk ?? 'Unknown',
   }
 })
+
+function getTextClass(label: string | null | undefined) {
+  return 'text-xs'
+}
 
 function handleMouseEnter() {
   if (hoverTimer)
@@ -112,9 +138,9 @@ onBeforeUnmount(() => {
       <!-- 按键名 -->
       <span
         v-if="keyInfo.info.symbol[0] === null"
-        class="absolute max-w-[96%] overflow-hidden break-all text-center leading-tight"
-        :class="{ 'text-xl': (keyInfo.info.symbol[1]?.length ?? 0) === 1, 'text-xs': (keyInfo.info.symbol[1]?.length ?? 0) > 1 }"
-        style="transform: translate(-50%, -50%); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;"
+        class="absolute max-w-[96%] overflow-hidden whitespace-pre-line text-center"
+        :class="getTextClass(keyInfo.info.symbol[1])"
+        style="transform: translate(-50%, -50%);"
         :style="{
           top: `${keyInfo.geometry.height / 2 * size}px`,
           left: `${keyInfo.geometry.width / 2 * size}px`,
@@ -124,8 +150,8 @@ onBeforeUnmount(() => {
       </span>
       <span
         v-else
-        class="absolute max-w-[96%] overflow-hidden break-all text-center text-xs leading-tight"
-        style="transform: translate(-50%, -50%); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;"
+        class="absolute max-w-[96%] overflow-hidden whitespace-pre-line text-center text-xs"
+        style="transform: translate(-50%, -50%);"
         :style="{
           top: `${padding + (keyInfo.geometry.height * size - 2 * padding) / 5}px`,
           left: `${keyInfo.geometry.width / 2 * size}px`,
@@ -161,8 +187,8 @@ onBeforeUnmount(() => {
       />
 
       <span
-        class="absolute max-w-[96%] overflow-hidden break-all text-center text-xs leading-tight"
-        style="transform: translate(-50%, -50%); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;"
+        class="absolute max-w-[96%] overflow-hidden whitespace-pre-line text-center text-xs"
+        style="transform: translate(-50%, -50%);"
         :style="{
           top: `${padding + (keyInfo.geometry.height * size - 2 * padding) / 5 * 3.5}px`,
           left: `${keyInfo.geometry.width / 2 * size}px`,

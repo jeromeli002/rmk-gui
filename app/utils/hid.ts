@@ -16,9 +16,20 @@ export class WebHIDApi implements HIDApi {
 export class WebHIDDevice implements HIDInterface {
   private pendingRequests: Map<number, { resolve: (value: Uint8Array) => void, reject: (reason: any) => void, timeout: ReturnType<typeof setTimeout> }> = new Map()
   private nextRequestId = 1
+  private disconnected = false
 
   constructor(private device: HIDDevice) {
     this.device.addEventListener('inputreport', this.handleInputReport.bind(this))
+    this.device.addEventListener('disconnect', () => {
+      console.log('HID device disconnected')
+      this.disconnected = true
+      // 清理所有待处理的请求
+      for (const request of this.pendingRequests.values()) {
+        clearTimeout(request.timeout)
+        request.reject(new Error('Device disconnected'))
+      }
+      this.pendingRequests.clear()
+    })
   }
 
   private handleInputReport(event: HIDInputReportEvent): void {
@@ -37,7 +48,7 @@ export class WebHIDDevice implements HIDInterface {
   }
 
   isConnected(): boolean {
-    return this.device?.opened || false
+    return this.device?.opened && !this.disconnected || false
   }
 
   async productName(): Promise<string> {
@@ -54,13 +65,14 @@ export class WebHIDDevice implements HIDInterface {
       const timeout = setTimeout(() => {
         this.pendingRequests.delete(requestId)
         reject(new Error('Device response timeout'))
-      }, 1000)
+      }, 2000)  // Increase timeout to 2 seconds
 
       this.pendingRequests.set(requestId, { resolve, reject, timeout })
 
       this.device.sendReport(0, new Uint8Array(data)).catch((err) => {
         this.pendingRequests.delete(requestId)
         clearTimeout(timeout)
+        this.disconnected = true
         reject(err)
       })
     })
@@ -111,10 +123,17 @@ export class TauriHIDDevice implements HIDInterface {
     if (!this.connected)
       throw new Error('Device not connected')
 
-    const result: number[] = await invoke('write_read', {
-      data: Array.from(data),
-    })
-    return new Uint8Array(result)
+    try {
+      const result: number[] = await invoke('write_read', {
+        data: Array.from(data),
+      })
+      return new Uint8Array(result)
+    } catch (error) {
+      // 如果通信失败，可能是设备断开了
+      console.warn('HID communication failed, marking device as disconnected:', error)
+      this.connected = false
+      throw error
+    }
   }
 
   async disconnect(): Promise<void> {

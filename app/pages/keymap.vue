@@ -47,7 +47,7 @@ function handleSelectEncoder(binding: NonNullable<typeof currEncoder.value>) {
 function selectNext() {
   // 创建所有控件的有序列表（按键和编码器）
   const allControls = []
-  
+
   // 添加按键
   for (const key of keys.value) {
     allControls.push({
@@ -55,11 +55,11 @@ function selectNext() {
       value: key,
       position: {
         x: key.geometry.x,
-        y: key.geometry.y
-      }
+        y: key.geometry.y,
+      },
     })
   }
-  
+
   // 添加编码器
   for (const encoder of encoders.value) {
     if (encoder.ccw) {
@@ -68,8 +68,8 @@ function selectNext() {
         value: encoder.ccw,
         position: {
           x: encoder.ccw.geometry.x,
-          y: encoder.ccw.geometry.y
-        }
+          y: encoder.ccw.geometry.y,
+        },
       })
     }
     if (encoder.cw) {
@@ -78,12 +78,12 @@ function selectNext() {
         value: encoder.cw,
         position: {
           x: encoder.cw.geometry.x,
-          y: encoder.cw.geometry.y
-        }
+          y: encoder.cw.geometry.y,
+        },
       })
     }
   }
-  
+
   // 按位置排序（先按y坐标，再按x坐标）
   allControls.sort((a, b) => {
     if (a.position.y !== b.position.y) {
@@ -91,40 +91,44 @@ function selectNext() {
     }
     return a.position.x - b.position.x
   })
-  
+
   // 找到当前选中的控件在列表中的索引
   let currentIndex = -1
   if (currKey.value) {
-    currentIndex = allControls.findIndex(control => 
-      control.type === 'key' && 
-      control.value.position.row === currKey.value[0][0] && 
-      control.value.position.col === currKey.value[0][1]
-    )
-  } else if (currEncoder.value) {
-    currentIndex = allControls.findIndex(control => 
-      control.type === 'encoder' && 
-      control.value.encoder === currEncoder.value?.encoder && 
-      control.value.direction === currEncoder.value?.direction
+    currentIndex = allControls.findIndex(control =>
+      control.type === 'key'
+      && control.value.position.row === currKey.value[0][0]
+      && control.value.position.col === currKey.value[0][1],
     )
   }
-  
+  else if (currEncoder.value) {
+    currentIndex = allControls.findIndex(control =>
+      control.type === 'encoder'
+      && control.value.encoder === currEncoder.value?.encoder
+      && control.value.direction === currEncoder.value?.direction,
+    )
+  }
+
   // 选择下一个控件
   if (currentIndex >= 0 && currentIndex < allControls.length - 1) {
     const nextControl = allControls[currentIndex + 1]
     if (nextControl.type === 'key') {
       currKey.value = [[nextControl.value.position.row, nextControl.value.position.col], 'outer']
       currEncoder.value = null
-    } else {
+    }
+    else {
       currEncoder.value = nextControl.value
       currKey.value = null
     }
-  } else if (allControls.length > 0) {
+  }
+  else if (allControls.length > 0) {
     // 如果已经是最后一个控件，回到第一个
     const firstControl = allControls[0]
     if (firstControl.type === 'key') {
       currKey.value = [[firstControl.value.position.row, firstControl.value.position.col], 'outer']
       currEncoder.value = null
-    } else {
+    }
+    else {
       currEncoder.value = firstControl.value
       currKey.value = null
     }
@@ -176,7 +180,8 @@ async function handleSaveKeycode(keycode: number) {
   if ('encoder' in editingKey.value) {
     // 编码器
     await keyboardStore.setEncoderKeycode(currLayer.value, editingKey.value.encoder, editingKey.value.direction, keycode)
-  } else {
+  }
+  else {
     // 普通按键
     const [row, col] = [editingKey.value.position.row, editingKey.value.position.col]
     const currKeyPos: [number, number, number] = [currLayer.value, row, col]
@@ -277,25 +282,25 @@ function getEncoderButtonStyle(binding: NonNullable<typeof currEncoder.value>) {
         <template v-for="encoder in encoders" :key="encoder.index">
           <button
             v-if="encoder.ccw"
-            class="absolute z-20 flex items-center justify-center w-[56px] h-[56px] rounded-full border-2 border-surface-400 bg-surface-100 text-xs shadow-sm dark:border-surface-500 dark:bg-surface-800"
+            class="absolute z-20 flex size-[56px] items-center justify-center rounded-full border-2 border-surface-400 bg-surface-100 text-xs shadow-sm dark:border-surface-500 dark:bg-surface-800"
             :class="{ '!border-primary !text-primary': currEncoder?.encoder === encoder.index && currEncoder?.direction === 'ccw' }"
             :style="getEncoderButtonStyle(encoder.ccw)"
             @click="handleSelectEncoder(encoder.ccw)"
             @dblclick="handleDblClick(encoder.ccw as any, 'outer')"
           >
             <Icon name="tabler:rotate-2" class="absolute left-1 top-1 text-sm" />
-            <span class="max-w-[80%] text-center break-all leading-tight">{{ getEncoderLabel(encoder.ccw) }}</span>
+            <span class="max-w-[80%] break-all text-center leading-tight">{{ getEncoderLabel(encoder.ccw) }}</span>
           </button>
           <button
             v-if="encoder.cw"
-            class="absolute z-20 flex items-center justify-center w-[56px] h-[56px] rounded-full border-2 border-surface-400 bg-surface-100 text-xs shadow-sm dark:border-surface-500 dark:bg-surface-800"
+            class="absolute z-20 flex size-[56px] items-center justify-center rounded-full border-2 border-surface-400 bg-surface-100 text-xs shadow-sm dark:border-surface-500 dark:bg-surface-800"
             :class="{ '!border-primary !text-primary': currEncoder?.encoder === encoder.index && currEncoder?.direction === 'cw' }"
             :style="getEncoderButtonStyle(encoder.cw)"
             @click="handleSelectEncoder(encoder.cw)"
             @dblclick="handleDblClick(encoder.cw as any, 'outer')"
           >
             <Icon name="tabler:rotate-clockwise-2" class="absolute right-1 top-1 text-sm" />
-            <span class="max-w-[80%] text-center break-all leading-tight">{{ getEncoderLabel(encoder.cw) }}</span>
+            <span class="max-w-[80%] break-all text-center leading-tight">{{ getEncoderLabel(encoder.cw) }}</span>
           </button>
         </template>
       </div>
